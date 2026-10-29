@@ -2,6 +2,7 @@
 
 mod expr_ext;
 mod interpol;
+pub mod make;
 mod nodes;
 mod operators;
 mod path_util;
