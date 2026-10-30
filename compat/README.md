@@ -70,6 +70,9 @@ status 1 if any input is `rnix-rejects`, `tree-differs`, `string-differs`, `numb
 `render-rejected`, `values-rejected` or `unreadable`. As of rnix 0.15.1 and Nix 2.35.3, every file
 in nixpkgs is `same`. To use another Nix, set `RNIX_COMPAT_NIX_INSTANTIATE`.
 
+CI runs the tests on every pull request, and the `compat` workflow compares the latest nixpkgs
+every week, the values of literals included.
+
 - [`cases.md`](cases.md) lists the inputs on which the parsers disagree, by cause, and inputs on
   which they agree but that are easy to get wrong. [`cases.expect`](cases.expect) records their
   outcomes.
