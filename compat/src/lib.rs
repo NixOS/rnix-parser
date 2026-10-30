@@ -4,6 +4,7 @@ mod check;
 mod nix;
 mod notation;
 mod render;
+mod strings;
 
 pub use check::{Checker, Outcome};
 pub use nix::Nix;

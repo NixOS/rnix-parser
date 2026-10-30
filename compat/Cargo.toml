@@ -7,6 +7,7 @@ edition = "2024"
 
 [dependencies]
 rnix = { path = ".." }
+rowan = "0.17"
 
 [dev-dependencies]
 expect-test = "1.5.1"
