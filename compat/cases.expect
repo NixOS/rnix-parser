@@ -32,15 +32,12 @@ same            a * !b ? c
 same            a + !b == c
 
 ### legacy-let
-rnix-rejects    f let { body = 1; }
-    rnix: unexpected token at 2..19
-rnix-rejects    let { body = 1; }.body
-    rnix: unexpected token at 17..22
-rnix-rejects    let { } == x
-    rnix: unexpected token at 8..12
-tree-differs    e: let { } or
-    nix: (e: ((rec { }).body or))
-    rnix: ((e: (rec { }).body) or)
+same            f let { body = 1; }
+same            let { body = 1; }.body
+same            let { } == x
+same            e: let { } or
+same            [ let { body = 1; } ]
+same            -let { body = 1; }
 
 ### comment-cr
 same            f # c⟨CR⟩x

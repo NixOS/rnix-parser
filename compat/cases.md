@@ -76,6 +76,8 @@ f let { body = 1; }
 let { body = 1; }.body
 let { } == x
 e: let { } or
+[ let { body = 1; } ]
+-let { body = 1; }
 ```
 
 ### comment-cr

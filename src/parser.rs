@@ -444,6 +444,14 @@ where
                 self.parse_set(T!['}']);
                 self.finish_node();
             }
+            // `let { … }`, an old form of `rec { … }.body`
+            T![let] => {
+                self.start_node(NODE_LEGACY_LET);
+                self.bump();
+                self.expect(T!['{']);
+                self.parse_set(T!['}']);
+                self.finish_node();
+            }
             T!['{'] => {
                 // Do a lookahead:
                 let mut peek = [None, None];
@@ -621,10 +629,14 @@ where
 
         checkpoint
     }
+    /// Whether the next tokens start `let { … }`, which Nix parses like any simple expression.
+    fn at_legacy_let(&mut self) -> bool {
+        self.peek() == Some(T![let]) && self.peek_ahead(1) == Some(T!['{'])
+    }
     fn parse_fn(&mut self) -> Checkpoint {
         let checkpoint = self.parse_simple();
 
-        while self.peek().map(|t| t.is_fn_arg()).unwrap_or(false) {
+        while self.peek().map(|t| t.is_fn_arg()).unwrap_or(false) || self.at_legacy_let() {
             self.start_node_at(checkpoint, NODE_APPLY);
             self.parse_simple();
             self.finish_node();
@@ -757,21 +769,13 @@ where
         }
         self.depth += 1;
         let out = match self.peek() {
-            Some(T![let]) => {
+            Some(T![let]) if !self.at_legacy_let() => {
                 let checkpoint = self.checkpoint();
                 self.bump();
-
-                if self.peek() == Some(T!['{']) {
-                    self.start_node_at(checkpoint, NODE_LEGACY_LET);
-                    self.bump();
-                    self.parse_set(T!['}']);
-                    self.finish_node();
-                } else {
-                    self.start_node_at(checkpoint, NODE_LET_IN);
-                    self.parse_set(T![in]);
-                    self.parse_expr();
-                    self.finish_node();
-                }
+                self.start_node_at(checkpoint, NODE_LET_IN);
+                self.parse_set(T![in]);
+                self.parse_expr();
+                self.finish_node();
                 checkpoint
             }
             Some(T![with]) => {
