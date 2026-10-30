@@ -55,8 +55,9 @@ rnix only parses UTF-8, so a file that isn't is `rnix-rejects` if Nix accepts it
 nix develop .#compat
 cd compat
 
-cargo test                    # cases.md, rnix's test_data and Nix's language tests
+cargo test                    # cases.md, rnix's test_data, Nix's language tests, generated inputs
 UPDATE_EXPECT=1 cargo test    # record changed outcomes in the .expect files
+HEGEL_TEST_CASES=10000 cargo test --test generated    # more generated inputs, a few minutes
 
 cargo run --release -- -e '0.a'                            # compare an expression
 cargo run --release -- --values "$RNIX_COMPAT_NIXPKGS"     # all of nixpkgs, a few minutes
@@ -78,6 +79,10 @@ every week, the values of literals included.
   outcomes.
 - [`test_data.expect`](test_data.expect) and [`nix-lang.expect`](nix-lang.expect) record the files
   in rnix's `test_data` and in Nix's language tests on which the parsers disagree.
+- [`tests/generated.rs`](tests/generated.rs) has [Hegel](https://hegel.dev/) generate expressions
+  from Nix's grammar, and strings, and fails on any that rnix parses differently from Nix, with
+  the smallest such input it can find. Input that only rnix accepts passes, for now. On CI, the
+  inputs are the same every run.
 
 ## Following a Nix release
 
