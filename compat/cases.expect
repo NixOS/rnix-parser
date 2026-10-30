@@ -30,6 +30,11 @@ both-reject     ./a//b
 both-reject     ./${a}//
     nix: error: path has a trailing slash
 
+### path-then-home
+same            /${l}~/${a} or
+same            ./${a}~/b
+same            ~/${a}~/${b}
+
 ### not-operand
 same            a + !b
 same            -!a

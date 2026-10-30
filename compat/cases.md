@@ -62,6 +62,18 @@ path can contain `//`. Before one, it can't, and no path can end with `/`.
 ./${a}//
 ```
 
+### path-then-home
+
+A `~` doesn't continue a path, so after an interpolation it starts another one: Nix reads
+`./${a}~/b` as `./${a}` applied to `~/b`. rnix made them one path. The comparison only sees it
+when something like `or` follows, because rnix's rendering writes a path as it is.
+
+```nix
+/${l}~/${a} or
+./${a}~/b
+~/${a}~/${b}
+```
+
 ### not-operand
 
 Nix accepts `!` at the start of any operand: `a + !b` is `a + (!b)`, and `-!a` is `-(!a)`. rnix

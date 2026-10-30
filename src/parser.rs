@@ -525,11 +525,15 @@ where
 
                 if is_complex_path {
                     loop {
-                        match self.peek_raw().map(|(t, _)| t) {
-                            Some(TOKEN_PATH_ABS) | Some(TOKEN_PATH_REL) | Some(TOKEN_PATH_HOME) => {
+                        match self.peek_raw() {
+                            // The rest of the path. Like Nix, a `~` after an interpolation starts
+                            // another path: `./${a}~/b` is `./${a}` applied to `~/b`.
+                            Some(&(TOKEN_PATH_ABS | TOKEN_PATH_REL | TOKEN_PATH_HOME, text))
+                                if !text.starts_with('~') =>
+                            {
                                 self.bump()
                             }
-                            Some(TOKEN_INTERPOL_START) => {
+                            Some(&(TOKEN_INTERPOL_START, _)) => {
                                 self.start_node(NODE_INTERPOL);
                                 self.bump();
                                 self.parse_expr();
