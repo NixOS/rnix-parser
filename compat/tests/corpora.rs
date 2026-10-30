@@ -28,12 +28,15 @@ fn check_dir(dir: &Path, expected: ExpectFile) {
 #[test]
 fn test_data() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../test_data");
-    check_dir(&dir, expect_file!["../test_data.expect"]);
+    check_dir(&dir, expect_file![concat!(env!("CARGO_MANIFEST_DIR"), "/test_data.expect")]);
 }
 
 #[test]
 fn nix_language_tests() {
     let src = env::var_os("RNIX_COMPAT_NIX_SRC")
         .expect("RNIX_COMPAT_NIX_SRC should be the source of the Nix release rnix follows");
-    check_dir(&Path::new(&src).join("tests/functional/lang"), expect_file!["../nix-lang.expect"]);
+    check_dir(
+        &Path::new(&src).join("tests/functional/lang"),
+        expect_file![concat!(env!("CARGO_MANIFEST_DIR"), "/nix-lang.expect")],
+    );
 }

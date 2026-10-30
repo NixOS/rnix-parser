@@ -42,5 +42,5 @@ fn cases() {
         }
         actual.push_str(&outcome.describe(&escape(input)));
     }
-    expect_file!["../cases.expect"].assert_eq(&actual);
+    expect_file![concat!(env!("CARGO_MANIFEST_DIR"), "/cases.expect")].assert_eq(&actual);
 }
