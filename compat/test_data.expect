@@ -1,0 +1,6 @@
+nix-instantiate (Nix) 2.35.3
+
+rnix-accepts    parser/success/pipe_mixed.nix
+    nix: error: syntax error, unexpected '|>', expecting end of file
+rnix-accepts    parser/success/pipe_mixed_math.nix
+    nix: error: syntax error, unexpected '|>', expecting end of file
