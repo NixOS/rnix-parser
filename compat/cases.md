@@ -112,6 +112,7 @@ produces still starts a line whose spaces get stripped.
 ''  ''\n ''
 ''''\⟨LF⟩ ''
 ''  ''\⟨LF⟩a⟨TAB⟩''
+''a''\⟨CR⟩b''
 ```
 
 ### nul-end

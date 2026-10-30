@@ -24,147 +24,179 @@ impl ast::Str {
 
     pub fn normalized_parts(&self) -> Vec<InterpolPart<String>> {
         let multiline = children_tokens_u(self).next().is_some_and(|t| t.text() == "''");
-        let mut is_first_literal = true;
-        let mut at_start_of_line = true;
-        let mut min_indent = 1000000;
-        let mut cur_indent = 0;
-        let mut n = 0;
-        let mut first_is_literal = false;
-
         if multiline {
-            for part in self.parts() {
-                match part {
-                    InterpolPart::Interpolation(_) => {
-                        if at_start_of_line {
-                            at_start_of_line = false;
-                            min_indent = min_indent.min(cur_indent);
-                        }
-                        n += 1;
-                    }
-                    InterpolPart::Literal(literal) => {
-                        let mut token_text = literal.syntax().text();
-
-                        if n == 0 {
-                            first_is_literal = true;
-                        }
-
-                        if is_first_literal && first_is_literal {
-                            is_first_literal = false;
-                            if let Some(p) = token_text.find('\n')
-                                && token_text[0..p].chars().all(|c| c == ' ')
-                            {
-                                token_text = &token_text[p + 1..]
-                            }
-                        }
-
-                        for c in token_text.chars() {
-                            if at_start_of_line {
-                                if c == ' ' {
-                                    cur_indent += 1;
-                                } else if c == '\n' {
-                                    cur_indent = 0;
-                                } else {
-                                    at_start_of_line = false;
-                                    min_indent = min_indent.min(cur_indent);
-                                }
-                            } else if c == '\n' {
-                                at_start_of_line = true;
-                                cur_indent = 0;
-                            }
-                        }
-
-                        n += 1;
-                    }
-                }
-            }
+            return strip_indentation(self.parts().collect());
         }
-
-        let mut normalized_parts =
-            Vec::with_capacity(if multiline { n } else { self.parts().count() });
-        let mut cur_dropped = 0;
-        let mut i = 0;
-        is_first_literal = true;
-        at_start_of_line = true;
-
-        for part in self.parts() {
-            match part {
-                InterpolPart::Interpolation(interpol) => {
-                    at_start_of_line = false;
-                    cur_dropped = 0;
-                    normalized_parts.push(InterpolPart::Interpolation(interpol));
-                    i += 1;
-                }
+        self.parts()
+            .map(|part| match part {
                 InterpolPart::Literal(literal) => {
-                    let mut token_text = literal.syntax().text();
-
-                    if multiline {
-                        if is_first_literal && first_is_literal {
-                            is_first_literal = false;
-                            if let Some(p) = token_text.find('\n')
-                                && token_text[0..p].chars().all(|c| c == ' ')
-                            {
-                                token_text = &token_text[p + 1..];
-                                if token_text.is_empty() {
-                                    i += 1;
-                                    continue;
-                                }
-                            }
-                        }
-
-                        let mut str = String::with_capacity(token_text.len());
-                        for c in token_text.chars() {
-                            if at_start_of_line {
-                                if c == ' ' {
-                                    if cur_dropped >= min_indent {
-                                        str.push(c);
-                                    }
-                                    cur_dropped += 1;
-                                } else if c == '\n' {
-                                    cur_dropped = 0;
-                                    str.push(c);
-                                } else {
-                                    at_start_of_line = false;
-                                    cur_dropped = 0;
-                                    str.push(c);
-                                }
-                            } else {
-                                str.push(c);
-                                if c == '\n' {
-                                    at_start_of_line = true;
-                                }
-                            }
-                        }
-
-                        if i == n - 1
-                            && let Some(p) = str.rfind('\n')
-                            && str[p + 1..].chars().all(|c| c == ' ')
-                        {
-                            str.truncate(p + 1);
-                        }
-
-                        normalized_parts.push(InterpolPart::Literal(unescape(&str, multiline)));
-                        i += 1;
-                    } else {
-                        normalized_parts
-                            .push(InterpolPart::Literal(unescape(token_text, multiline)));
-                    }
+                    InterpolPart::Literal(unescape(literal.syntax().text()))
                 }
-            }
-        }
-
-        normalized_parts
+                InterpolPart::Interpolation(interpol) => InterpolPart::Interpolation(interpol),
+            })
+            .collect()
     }
 }
 
-/// Interpret escape sequences in the nix string and return the converted value
-pub fn unescape(input: &str, multiline: bool) -> String {
+/// A piece of the text of an indented string, split like Nix's lexer splits it into tokens:
+/// text as written, and escapes (`'''`, `''$` and `''\x`), which are tokens of their own.
+enum Piece<'a> {
+    Written(&'a str),
+    Escape(&'a str),
+}
+
+impl<'a> Piece<'a> {
+    /// What the piece stands for.
+    fn value(&self) -> &'a str {
+        match *self {
+            Piece::Written(text) => text,
+            Piece::Escape("'''") => "''",
+            Piece::Escape("''$") => "$",
+            Piece::Escape(escape) => match &escape[3..] {
+                "n" => "\n",
+                "r" => "\r",
+                "t" => "\t",
+                c => c,
+            },
+        }
+    }
+}
+
+/// Splits the text of an indented string into [`Piece`]s.
+fn pieces(text: &str) -> impl Iterator<Item = Piece<'_>> {
+    let mut rest = text;
+    std::iter::from_fn(move || {
+        if rest.is_empty() {
+            return None;
+        }
+        let (piece, len) = match rest.find("''") {
+            // In the text of a string, `''` starts an escape.
+            Some(0) => match rest[2..].chars().next() {
+                Some('\'' | '$') => (Piece::Escape(&rest[..3]), 3),
+                Some('\\') => {
+                    let len = 3 + rest[3..].chars().next().map_or(0, char::len_utf8);
+                    (Piece::Escape(&rest[..len]), len)
+                }
+                _ => (Piece::Written(&rest[..2]), 2),
+            },
+            Some(start) => (Piece::Written(&rest[..start]), start),
+            None => (Piece::Written(rest), rest.len()),
+        };
+        rest = &rest[len..];
+        Some(piece)
+    })
+}
+
+/// The text of the literal part with index `i`. Nix's lexer reads spaces and a line feed right
+/// after the opening `''` as part of it.
+fn literal_text(i: usize, literal: &StrContent) -> &str {
+    let text = literal.syntax().text();
+    match text.trim_start_matches(' ').strip_prefix('\n') {
+        Some(rest) if i == 0 => rest,
+        _ => text,
+    }
+}
+
+/// Strips the indentation of an indented string like Nix's parser, which does it on the tokens of
+/// its lexer (`ParserState::stripIndentation`): an escape counts as text when it measures the
+/// indentation, but what the escape stands for is stripped like what's written.
+fn strip_indentation(parts: Vec<InterpolPart<StrContent>>) -> Vec<InterpolPart<String>> {
+    // Measure the indentation: the least of any line's but the empty ones.
+    let mut at_start_of_line = true;
+    let mut min_indent = usize::MAX;
+    let mut cur_indent = 0;
+    let mut end_of_indentation = |at_start_of_line: &mut bool, cur_indent: usize| {
+        if *at_start_of_line {
+            *at_start_of_line = false;
+            min_indent = min_indent.min(cur_indent);
+        }
+    };
+    for (i, part) in parts.iter().enumerate() {
+        let InterpolPart::Literal(literal) = part else {
+            end_of_indentation(&mut at_start_of_line, cur_indent);
+            continue;
+        };
+        for piece in pieces(literal_text(i, literal)) {
+            let Piece::Written(text) = piece else {
+                end_of_indentation(&mut at_start_of_line, cur_indent);
+                continue;
+            };
+            for c in text.chars() {
+                if !at_start_of_line {
+                    if c == '\n' {
+                        at_start_of_line = true;
+                        cur_indent = 0;
+                    }
+                } else if c == ' ' {
+                    cur_indent += 1;
+                } else if c == '\n' {
+                    cur_indent = 0;
+                } else {
+                    end_of_indentation(&mut at_start_of_line, cur_indent);
+                }
+            }
+        }
+    }
+
+    // Strip it.
+    let mut normalized = Vec::with_capacity(parts.len());
+    let mut at_start_of_line = true;
+    let mut cur_dropped = 0;
+    for (i, part) in parts.iter().enumerate() {
+        let literal = match part {
+            InterpolPart::Interpolation(interpol) => {
+                at_start_of_line = false;
+                cur_dropped = 0;
+                normalized.push(InterpolPart::Interpolation(interpol.clone()));
+                continue;
+            }
+            InterpolPart::Literal(literal) => literal,
+        };
+        let mut pieces = pieces(literal_text(i, literal)).peekable();
+        // All of it belonged to the opening `''`.
+        if pieces.peek().is_none() {
+            continue;
+        }
+        let mut text = String::new();
+        while let Some(piece) = pieces.next() {
+            let start = text.len();
+            for c in piece.value().chars() {
+                if !at_start_of_line {
+                    text.push(c);
+                    at_start_of_line = c == '\n';
+                } else if c == ' ' {
+                    if cur_dropped >= min_indent {
+                        text.push(c);
+                    }
+                    cur_dropped += 1;
+                } else {
+                    at_start_of_line = c == '\n';
+                    cur_dropped = 0;
+                    text.push(c);
+                }
+            }
+            // Nix drops the last line of the last token if it's only spaces.
+            if i == parts.len() - 1
+                && pieces.peek().is_none()
+                && let Some(newline) = text[start..].rfind('\n')
+                && text[start + newline + 1..].bytes().all(|b| b == b' ')
+            {
+                text.truncate(start + newline + 1);
+            }
+        }
+        normalized.push(InterpolPart::Literal(text));
+    }
+    normalized
+}
+
+/// Interpret escape sequences in the text of a `"…"` string and return the converted value
+fn unescape(input: &str) -> String {
     let mut output = String::with_capacity(input.len());
     let mut input = input.chars().peekable();
     loop {
         match input.next() {
-            None => break,
-            Some('"') if !multiline => break,
-            Some('\\') if !multiline => match input.next() {
+            None | Some('"') => break,
+            Some('\\') => match input.next() {
                 None => break,
                 Some('n') => output.push('\n'),
                 Some('r') => output.push('\r'),
@@ -172,40 +204,10 @@ pub fn unescape(input: &str, multiline: bool) -> String {
                 Some(c) => output.push(c),
             },
             // Like Nix, read a carriage return, alone or before a line feed, as a line feed.
-            Some('\r') if !multiline => {
+            Some('\r') => {
                 input.next_if_eq(&'\n');
                 output.push('\n');
             }
-            Some('\'') if multiline => match input.next() {
-                None => {
-                    output.push('\'');
-                }
-                Some('\'') => match input.peek() {
-                    Some('\'') => {
-                        input.next().unwrap();
-                        output.push_str("''");
-                    }
-                    Some('$') => {
-                        input.next().unwrap();
-                        output.push('$');
-                    }
-                    Some('\\') => {
-                        input.next().unwrap();
-                        match input.next() {
-                            None => break,
-                            Some('n') => output.push('\n'),
-                            Some('r') => output.push('\r'),
-                            Some('t') => output.push('\t'),
-                            Some(c) => output.push(c),
-                        }
-                    }
-                    _ => break,
-                },
-                Some(c) => {
-                    output.push('\'');
-                    output.push(c);
-                }
-            },
             Some(c) => output.push(c),
         }
     }
@@ -218,18 +220,42 @@ mod tests {
 
     use super::*;
 
+    /// The literal parts of the string `source`.
+    fn literals(source: &str) -> Vec<String> {
+        let Some(ast::Expr::Str(str)) = Root::parse(source).ok().unwrap().expr() else {
+            panic!("{source:?} isn't a string");
+        };
+        str.normalized_parts()
+            .into_iter()
+            .filter_map(|part| match part {
+                InterpolPart::Literal(literal) => Some(literal),
+                InterpolPart::Interpolation(_) => None,
+            })
+            .collect()
+    }
+
     #[test]
     fn string_unescapes() {
-        assert_eq!(unescape(r#"Hello\n\"World\" :D"#, false), "Hello\n\"World\" :D");
-        assert_eq!(unescape(r#"\"Hello\""#, false), "\"Hello\"");
+        assert_eq!(unescape(r#"Hello\n\"World\" :D"#), "Hello\n\"World\" :D");
+        assert_eq!(unescape(r#"\"Hello\""#), "\"Hello\"");
 
-        assert_eq!(unescape(r#"Hello''\n'''World''' :D"#, true), "Hello\n''World'' :D");
-        assert_eq!(unescape(r#""Hello""#, true), "\"Hello\"");
+        assert_eq!(literals(r#"''Hello''\n'''World''' :D''"#), ["Hello\n''World'' :D"]);
+        assert_eq!(literals(r#"''"Hello"''"#), ["\"Hello\""]);
     }
     #[test]
     fn string_carriage_returns() {
         // An escaped carriage return stays one.
-        assert_eq!(unescape("a\rb\r\nc\\\rd", false), "a\nb\nc\rd");
+        assert_eq!(unescape("a\rb\r\nc\\\rd"), "a\nb\nc\rd");
+    }
+    #[test]
+    fn indented_string_escapes() {
+        // Like Nix, an escape ends the indentation of its line, but the spaces after an escaped
+        // line feed are stripped, and only the last line of the last token can be dropped.
+        assert_eq!(literals("''  ''\\n ''"), ["\n"]);
+        assert_eq!(literals("''''\\\n ''"), ["\n "]);
+        assert_eq!(literals("''  ''\\\na\t''"), ["\na\t"]);
+        // An escaped carriage return stays one, as in a `"…"` string.
+        assert_eq!(literals("''a''\\\rb''"), ["a\rb"]);
     }
     #[test]
     fn parts_leading_ws() {

@@ -50,18 +50,10 @@ same            "a⟨CR⟩⟨LF⟩b"
 same            ''a⟨CR⟩⟨LF⟩b''
 
 ### indented-escape
-string-differs  ''  ''\n ''
-    literal: ''  ''\n ''
-    nix: "\n"
-    rnix: "\n "
-string-differs  ''''\⟨LF⟩ ''
-    literal: ''''\⟨LF⟩ ''
-    nix: "\n "
-    rnix: "\n"
-string-differs  ''  ''\⟨LF⟩a⟨TAB⟩''
-    literal: ''  ''\⟨LF⟩a⟨TAB⟩''
-    nix: "\na\t"
-    rnix: "  \na\t"
+same            ''  ''\n ''
+same            ''''\⟨LF⟩ ''
+same            ''  ''\⟨LF⟩a⟨TAB⟩''
+same            ''a''\⟨CR⟩b''
 
 ### nul-end
 rnix-rejects    a⟨NUL⟩b
