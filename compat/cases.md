@@ -168,7 +168,7 @@ a ? ''b''
 
 ### search-path
 
-A search path (`<…>`) can't be empty or end with `/`.
+A search path (`<a/b>`) is names separated by `/`, so it can't start or end with `/`.
 
 ```nix
 </>
