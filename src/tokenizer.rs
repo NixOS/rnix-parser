@@ -520,23 +520,21 @@ impl Tokenizer<'_> {
                 TOKEN_STRING_START
             }
             fst @ '0'..='9' => {
-                // Due to nix's behavior on leading 0's we know immediately
-                // That a '0' followed by some other number character MUST tokenize into an INT.
-                // More background on this: https://github.com/NixOS/rnix-parser/issues/157
-                if fst == '0' && self.peek() != Some('.') {
-                    // In that case just consume the remaining number characters to fill the TOKEN_INTEGER
-                    self.consume(|c| c.is_ascii_digit());
-                    TOKEN_INTEGER
-                } else {
-                    // If we are not in that edge-case we can just continue with the regular number tokenization
-                    self.consume(|c| c.is_ascii_digit());
-                    if self.peek() == Some('.') {
-                        self.next().unwrap();
-                        self.consume(|c| c.is_ascii_digit());
+                self.consume(|c| c.is_ascii_digit());
+                let integer = self.str_since(start);
+                let fraction = self
+                    .remaining()
+                    .strip_prefix('.')
+                    .map(|rest| rest.bytes().take_while(u8::is_ascii_digit).count());
+                // Like Nix's, a float is `[1-9][0-9]*\.[0-9]*` or `0?\.[0-9]+`: `1.` is a float,
+                // but `0.a` selects `a` from `0`, and `00.5` is `00 .5`. More background on this:
+                // https://github.com/NixOS/rnix-parser/issues/157
+                match fraction {
+                    Some(digits) if fst != '0' || (integer == "0" && digits > 0) => {
+                        self.state.offset += 1 + digits;
                         self.consume_scientific()
-                    } else {
-                        TOKEN_INTEGER
                     }
+                    _ => TOKEN_INTEGER,
                 }
             }
             _ => TOKEN_ERROR,

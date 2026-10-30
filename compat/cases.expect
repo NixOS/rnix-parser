@@ -1,16 +1,10 @@
 nix-instantiate (Nix) 2.35.3
 
 ### zero-dot
-tree-differs    0.a
-    nix: (0).a
-    rnix: (0 a)
-tree-differs    0.e1
-    nix: (0).e1
-    rnix: 0
-tree-differs    x: x.a 0.a
-    nix: (x: ((x).a (0).a))
-    rnix: (x: ((x).a 0 a))
-rnix-accepts    [ 0. ]
+same            0.a
+same            0.e1
+same            x: x.a 0.a
+both-reject     [ 0. ]
     nix: error: syntax error, unexpected ']', expecting identifier or 'or' or '${' or '"'
 
 ### float-exponent
