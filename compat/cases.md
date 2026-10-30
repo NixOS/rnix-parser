@@ -10,10 +10,13 @@ characters that would break the line or be invisible.
 
 ## Nix accepts these
 
+rnix now parses all of these like Nix does, but for `nul-end`, on purpose, and `not-utf8`, which it
+can't.
+
 ### zero-dot
 
 A float literal needs a digit from 1 to 9 before a bare `.` (`1.` is a float, `0.` isn't), so
-Nix reads `0.a` as selecting `a` from `0`. rnix reads the float `0.` applied to `a`. Lix rejects
+Nix reads `0.a` as selecting `a` from `0`. rnix read the float `0.` applied to `a`. Lix rejects
 `0.a`.
 
 ```nix
@@ -26,7 +29,7 @@ x: x.a 0.a
 ### float-exponent
 
 An exponent needs digits. Nix reads `1.5e` as the float `1.5` followed by the variable `e`; rnix
-rejects the token.
+rejected the token.
 
 ```nix
 1.5e
@@ -38,7 +41,7 @@ f 1.e
 ### slash-operand
 
 `a/b` is a path, but a `/` followed by something other than a path character is division. rnix
-reads anything but whitespace after `/` as part of a path.
+read anything but whitespace after `/` as part of a path.
 
 ```nix
 a/(b)
@@ -77,7 +80,7 @@ when something like `or` follows, because rnix's rendering writes a path as it i
 ### not-operand
 
 Nix accepts `!` at the start of any operand: `a + !b` is `a + (!b)`, and `-!a` is `-(!a)`. rnix
-only accepts it at the start of an operand of `//`, `==`, `&&` and the other operators that bind
+only accepted it at the start of an operand of `//`, `==`, `&&` and the other operators that bind
 more loosely than `!`.
 
 ```nix
@@ -94,7 +97,7 @@ a + !b == c
 ### legacy-let
 
 `let { … }` is a simple expression in Nix: it can be applied, selected from, or followed by
-`or`. rnix only parses it where an expression starts, and doesn't continue after it.
+`or`. rnix only parsed it where an expression starts, and didn't continue after it.
 
 ```nix
 f let { body = 1; }
@@ -108,7 +111,7 @@ e: let { } or
 ### comment-cr
 
 A carriage return ends a `#` comment in Nix (see Nix's `parse-okay-crlf.nix`). rnix's comment
-runs to the next line feed.
+ran to the next line feed.
 
 ```nix
 f # c⟨CR⟩x
