@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeMap, env, fs, path::PathBuf, process::ExitCode, thread};
 
-use rnix_compat::{Checker, Nix, Outcome, escape, nix_files, par_map};
+use rnix_compat::{Checker, Nix, escape, nix_files, par_map};
 
 const USAGE: &str = "\
 usage: rnix-compat [--strings] [--jobs N] [--report FILE] [-e EXPR]... [PATH]...
@@ -63,30 +63,16 @@ fn run() -> Result<ExitCode, String> {
     eprintln!("comparing {} inputs with {}", inputs.len(), nix.version());
     let checker = if strings { Checker::new(nix).with_strings() } else { Checker::new(nix) };
     let results = par_map(&inputs, jobs, |input| match input {
-        Input::Expr(source) => (escape(source), Ok(checker.check(source))),
-        Input::File(path) => (
-            path.display().to_string(),
-            fs::read_to_string(path)
-                .map(|source| checker.check(&source))
-                .map_err(|e| e.to_string()),
-        ),
+        Input::Expr(source) => (escape(source), checker.check(source)),
+        Input::File(path) => (path.display().to_string(), checker.check_file(path)),
     });
 
     let mut counts = BTreeMap::new();
     let mut listing = String::new();
-    for (label, result) in &results {
-        match result {
-            Ok(outcome) => {
-                *counts.entry(outcome.kind()).or_insert(0) += 1;
-                if !matches!(outcome, Outcome::Same | Outcome::BothReject { .. }) {
-                    listing.push_str(&outcome.describe(label));
-                }
-            }
-            // rnix only parses UTF-8.
-            Err(error) => {
-                *counts.entry("unreadable").or_insert(0) += 1;
-                listing.push_str(&format!("{:<16}{label}\n    error: {error}\n", "unreadable"));
-            }
+    for (label, outcome) in &results {
+        *counts.entry(outcome.kind()).or_insert(0) += 1;
+        if !outcome.is_agreement() {
+            listing.push_str(&outcome.describe(label));
         }
     }
     match report {
@@ -97,6 +83,6 @@ fn run() -> Result<ExitCode, String> {
         println!("{count:>8} {kind}");
     }
 
-    let failed = results.iter().any(|(_, result)| result.as_ref().is_ok_and(Outcome::is_failure));
+    let failed = results.iter().any(|(_, outcome)| outcome.is_failure());
     Ok(if failed { ExitCode::FAILURE } else { ExitCode::SUCCESS })
 }

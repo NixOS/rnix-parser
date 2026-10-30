@@ -1,6 +1,6 @@
 //! Comparing rnix's parse of one input with Nix's.
 
-use std::fmt::Write;
+use std::{fmt::Write, fs, path::Path};
 
 use crate::{
     Nix, escape, render,
@@ -26,6 +26,8 @@ pub enum Outcome {
     RenderRejected { nix: String, rendering: String },
     /// rnix accepts the input and Nix doesn't.
     RnixAccepts { nix: String },
+    /// The input is a file that can't be read, or isn't UTF-8, which is all rnix parses.
+    Unreadable { error: String },
 }
 
 impl Outcome {
@@ -39,7 +41,13 @@ impl Outcome {
             Outcome::StringDiffers { .. } => "string-differs",
             Outcome::RenderRejected { .. } => "render-rejected",
             Outcome::RnixAccepts { .. } => "rnix-accepts",
+            Outcome::Unreadable { .. } => "unreadable",
         }
+    }
+
+    /// Whether both parsers accept the input and agree, or both reject it.
+    pub fn is_agreement(&self) -> bool {
+        matches!(self, Outcome::Same | Outcome::BothReject { .. })
     }
 
     /// Whether rnix parses input that Nix accepts differently from Nix. That is the first story
@@ -66,6 +74,7 @@ impl Outcome {
             Outcome::RenderRejected { nix, rendering } => {
                 vec![("nix", nix), ("rendering", rendering)]
             }
+            Outcome::Unreadable { error } => vec![("error", error)],
         }
     }
 
@@ -121,6 +130,14 @@ impl Checker {
                     },
                 }
             }
+        }
+    }
+
+    /// Compares rnix's parse of the file at `path` with Nix's.
+    pub fn check_file(&self, path: &Path) -> Outcome {
+        match fs::read_to_string(path) {
+            Ok(source) => self.check(&source),
+            Err(error) => Outcome::Unreadable { error: error.to_string() },
         }
     }
 }
