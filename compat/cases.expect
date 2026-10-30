@@ -45,14 +45,8 @@ same            # c⟨CR⟩x
 same            1 # a⟨CR⟩+ 2
 
 ### string-cr
-string-differs  "a⟨CR⟩b"
-    literal: "a⟨CR⟩b"
-    nix: "a\nb"
-    rnix: "a\rb"
-string-differs  "a⟨CR⟩⟨LF⟩b"
-    literal: "a⟨CR⟩⟨LF⟩b"
-    nix: "a\nb"
-    rnix: "a\r\nb"
+same            "a⟨CR⟩b"
+same            "a⟨CR⟩⟨LF⟩b"
 same            ''a⟨CR⟩⟨LF⟩b''
 
 ### indented-escape

@@ -171,6 +171,11 @@ pub fn unescape(input: &str, multiline: bool) -> String {
                 Some('t') => output.push('\t'),
                 Some(c) => output.push(c),
             },
+            // Like Nix, read a carriage return, alone or before a line feed, as a line feed.
+            Some('\r') if !multiline => {
+                input.next_if_eq(&'\n');
+                output.push('\n');
+            }
             Some('\'') if multiline => match input.next() {
                 None => {
                     output.push('\'');
@@ -220,6 +225,11 @@ mod tests {
 
         assert_eq!(unescape(r#"Hello''\n'''World''' :D"#, true), "Hello\n''World'' :D");
         assert_eq!(unescape(r#""Hello""#, true), "\"Hello\"");
+    }
+    #[test]
+    fn string_carriage_returns() {
+        // An escaped carriage return stays one.
+        assert_eq!(unescape("a\rb\r\nc\\\rd", false), "a\nb\nc\rd");
     }
     #[test]
     fn parts_leading_ws() {

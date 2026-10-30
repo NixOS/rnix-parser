@@ -34,7 +34,3 @@ rnix-accepts    parse-fail-mixed-nested-attrs2.nix
     nix: error: attribute 'x.y.y' already defined at «stdin»:2:3
 rnix-accepts    parse-fail-patterns-1.nix
     nix: error: duplicate formal function argument 'args'
-string-differs  parse-okay-crlf.nix
-    literal: "multi⟨CR⟩line⟨CR⟩⟨LF⟩  string⟨LF⟩  test\r"
-    nix: "multi\nline\n  string\n  test\r"
-    rnix: "multi\rline\r\n  string\n  test\r"
