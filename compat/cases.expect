@@ -8,14 +8,10 @@ both-reject     [ 0. ]
     nix: error: syntax error, unexpected ']', expecting identifier or 'or' or '${' or '"'
 
 ### float-exponent
-rnix-rejects    1.5e
-    rnix: unexpected TOKEN_ERROR at 0..4, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    1.5ea
-    rnix: unexpected TOKEN_ERROR at 0..4, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    .5e != a
-    rnix: unexpected TOKEN_ERROR at 0..3, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    f 1.e
-    rnix: unexpected token at 2..5
+same            1.5e
+same            1.5ea
+same            .5e != a
+same            f 1.e
 
 ### slash-operand
 rnix-rejects    a/(b)

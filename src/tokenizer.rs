@@ -407,7 +407,8 @@ impl Tokenizer<'_> {
             '.' => {
                 if self.peek().is_some_and(|x| x.is_ascii_digit()) {
                     self.consume(|c| c.is_ascii_digit());
-                    self.consume_scientific()
+                    self.consume_exponent();
+                    TOKEN_FLOAT
                 } else {
                     TOKEN_DOT
                 }
@@ -532,7 +533,8 @@ impl Tokenizer<'_> {
                 match fraction {
                     Some(digits) if fst != '0' || (integer == "0" && digits > 0) => {
                         self.state.offset += 1 + digits;
-                        self.consume_scientific()
+                        self.consume_exponent();
+                        TOKEN_FLOAT
                     }
                     _ => TOKEN_INTEGER,
                 }
@@ -541,17 +543,17 @@ impl Tokenizer<'_> {
         })
     }
 
-    fn consume_scientific(&mut self) -> SyntaxKind {
-        if self.peek() == Some('e') || self.peek() == Some('E') {
-            self.next().unwrap();
-            if self.peek() == Some('-') || self.peek() == Some('+') {
-                self.next().unwrap();
-            }
-            if self.consume(|c| c.is_ascii_digit()) == 0 {
-                return TOKEN_ERROR;
-            }
+    /// Consumes a float's exponent, if it has one. Like Nix, an exponent needs digits: `1.5e` is
+    /// `1.5` followed by `e`.
+    fn consume_exponent(&mut self) {
+        let rest = self.remaining().as_bytes();
+        let digits = if matches!(rest.get(1), Some(b'+' | b'-')) { 2 } else { 1 };
+        if matches!(rest.first(), Some(b'e' | b'E'))
+            && rest.get(digits).is_some_and(u8::is_ascii_digit)
+        {
+            self.state.offset += digits;
+            self.consume(|c| c.is_ascii_digit());
         }
-        TOKEN_FLOAT
     }
 }
 
