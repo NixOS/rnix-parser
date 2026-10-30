@@ -176,12 +176,19 @@ impl Tokenizer<'_> {
         }
     }
 
-    fn check_path_since(&mut self, past: State, kind: SyntaxKind) -> SyntaxKind {
+    /// Consumes the rest of a path's text, up to an interpolation or the end of the path. Like
+    /// Nix, a path can't end with `/`, and can only contain `//` after an interpolation.
+    fn check_path_since(
+        &mut self,
+        past: State,
+        kind: SyntaxKind,
+        interpolated: bool,
+    ) -> SyntaxKind {
         self.consume(is_valid_path_char);
         let path_str = self.str_since(past);
         if self.remaining().starts_with("${") {
             self.ctx.push(Context::InterpolStart);
-        } else if path_str.ends_with('/') || path_str.contains("//") {
+        } else if path_str.ends_with('/') || (!interpolated && path_str.contains("//")) {
             return TOKEN_ERROR;
         } else {
             self.pop_ctx(Context::Path(kind));
@@ -210,7 +217,7 @@ impl Tokenizer<'_> {
                     // Search paths (<nixpkgs>) don't support interpolation
                     if path_kind == TOKEN_PATH_SEARCH {
                         if self.peek().is_some_and(is_valid_path_char) {
-                            return Some(self.check_path_since(start, path_kind));
+                            return Some(self.check_path_since(start, path_kind, false));
                         } else {
                             self.pop_ctx(Context::Path(path_kind));
                         }
@@ -218,7 +225,8 @@ impl Tokenizer<'_> {
                         self.ctx.push(Context::Interpol { brackets: 0 });
                         return Some(TOKEN_INTERPOL_START);
                     } else if self.peek().is_some_and(is_valid_path_char) {
-                        return Some(self.check_path_since(start, path_kind));
+                        // The path's text after an interpolation.
+                        return Some(self.check_path_since(start, path_kind, true));
                     } else {
                         self.pop_ctx(Context::Path(path_kind));
                     }
@@ -367,7 +375,7 @@ impl Tokenizer<'_> {
 
                 // Store the kind in context so subsequent segments are consistent
                 self.push_ctx(Context::Path(token_kind));
-                self.check_path_since(start, token_kind)
+                self.check_path_since(start, token_kind, false)
             });
         }
 

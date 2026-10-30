@@ -21,6 +21,15 @@ same            a/[ b ]
 same            c/{ }
 same            r/!b
 
+### path-double-slash
+same            ./${a}//b
+same            ./a/${b}//c
+same            /${a}./b//c
+both-reject     ./a//b
+    nix: error: syntax error, unexpected end of path, expecting '${'
+both-reject     ./${a}//
+    nix: error: path has a trailing slash
+
 ### not-operand
 same            a + !b
 same            -!a

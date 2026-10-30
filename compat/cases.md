@@ -49,6 +49,19 @@ c/{ }
 r/!b
 ```
 
+### path-double-slash
+
+After an interpolation, Nix's lexer reads the rest of a path a `/` or a name at a time, so the
+path can contain `//`. Before one, it can't, and no path can end with `/`.
+
+```nix
+./${a}//b
+./a/${b}//c
+/${a}./b//c
+./a//b
+./${a}//
+```
+
 ### not-operand
 
 Nix accepts `!` at the start of any operand: `a + !b` is `a + (!b)`, and `-!a` is `-(!a)`. rnix
