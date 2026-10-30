@@ -124,6 +124,9 @@ string the same way ([NixOS/nix#12131](https://github.com/NixOS/nix/issues/12131
 made it an error ([NixOS/nix#12135](https://github.com/NixOS/nix/pull/12135)), but nothing changed
 outside strings. A NUL in a comment is part of the comment to both parsers.
 
+rnix reports an error for a NUL outside a string and comment on purpose: following Nix would
+mean ignoring whatever comes after it.
+
 ```nix
 a⟨NUL⟩b
 a⟨NUL⟩b ) c
