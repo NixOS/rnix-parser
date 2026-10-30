@@ -10,8 +10,6 @@ rnix-accepts    eval-fail-dynamic-attrs-let-3.nix
     nix: error: dynamic attributes not allowed in let
 rnix-accepts    eval-fail-dynamic-attrs-let.nix
     nix: error: dynamic attributes not allowed in let
-rnix-rejects    eval-fail-eol-2.nix
-    rnix: unexpected end of file
 rnix-accepts    eval-fail-string-nul-1.nix
     nix: error: input string 'foo␀bar' cannot be represented as Nix string because it contains null bytes
 rnix-accepts    eval-fail-string-nul-2.nix
@@ -36,5 +34,7 @@ rnix-accepts    parse-fail-mixed-nested-attrs2.nix
     nix: error: attribute 'x.y.y' already defined at «stdin»:2:3
 rnix-accepts    parse-fail-patterns-1.nix
     nix: error: duplicate formal function argument 'args'
-rnix-rejects    parse-okay-crlf.nix
-    rnix: unexpected TOKEN_ASSIGN at 74..79, wanted any of [TOKEN_SEMICOLON]
+string-differs  parse-okay-crlf.nix
+    literal: "multi⟨CR⟩line⟨CR⟩⟨LF⟩  string⟨LF⟩  test\r"
+    nix: "multi\nline\n  string\n  test\r"
+    rnix: "multi\rline\r\n  string\n  test\r"

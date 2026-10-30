@@ -262,7 +262,8 @@ impl Tokenizer<'_> {
         }
 
         if self.peek() == Some('#') {
-            self.consume(|c| c != '\n');
+            // Like Nix, a carriage return ends a comment too.
+            self.consume(|c| c != '\n' && c != '\r');
             return Some(TOKEN_COMMENT);
         }
         if self.starts_with_bump("/*") {

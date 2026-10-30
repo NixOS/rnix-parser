@@ -59,14 +59,9 @@ tree-differs    e: let { } or
     rnix: ((e: (rec { }).body) or)
 
 ### comment-cr
-tree-differs    f # c⟨CR⟩x
-    nix: (f x)
-    rnix: f
-rnix-rejects    # c⟨CR⟩x
-    rnix: unexpected end of file
-tree-differs    1 # a⟨CR⟩+ 2
-    nix: (1 + 2)
-    rnix: 1
+same            f # c⟨CR⟩x
+same            # c⟨CR⟩x
+same            1 # a⟨CR⟩+ 2
 
 ### string-cr
 string-differs  "a⟨CR⟩b"
