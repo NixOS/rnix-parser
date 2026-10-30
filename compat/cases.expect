@@ -14,18 +14,13 @@ same            .5e != a
 same            f 1.e
 
 ### slash-operand
-rnix-rejects    a/(b)
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    2/(3)
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    a/"b"
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    a/[ b ]
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    c/{ }
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
+same            a/(b)
+same            2/(3)
+same            a/"b"
+same            a/[ b ]
+same            c/{ }
 rnix-rejects    r/!b
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
+    rnix: unexpected TOKEN_INVERT at 2..3, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
 
 ### not-operand
 rnix-rejects    a + !b

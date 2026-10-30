@@ -320,15 +320,15 @@ impl Tokenizer<'_> {
                     (offset + c.len_utf8(), contains_underscore || c == '_')
                 });
 
-            let mut lookahead = remaining[skipped_len..].chars();
+            let after = &remaining[skipped_len..];
+            let mut lookahead = after.chars();
 
             match (lookahead.next(), lookahead.next()) {
-                // a//b parses as Update(a, b)
-                (Some('/'), Some('/')) => None,
-                (Some('/'), Some('*')) => None,
-                (Some('/'), Some(c)) if !c.is_whitespace() => {
-                    // If the first character of the yet‑to‑be‑consumed token was '/', we treat it as absolute later.
-                    // Otherwise it's a relative path.
+                // Like Nix, a path needs a path character or an interpolation after a `/`: `a//b`
+                // is `a // b`, `a/(b)` is `a / (b)`, and `a/*b*/` is `a` followed by a comment.
+                (Some('/'), Some(c))
+                    if (c != '/' && is_valid_path_char(c)) || after.starts_with("/${") =>
+                {
                     Some(IdentType::PathRel)
                 }
                 (Some('>'), _) => Some(IdentType::PathSearch),
