@@ -13,6 +13,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   Nix does, over Nix's language tests, and over the inputs in `compat/cases.md` on which they
   still disagree ([#202](https://github.com/NixOS/rnix-parser/pull/202)).
 
+### Fixed
+
+* Parse these like Nix does ([#203](https://github.com/NixOS/rnix-parser/pull/203)):
+  * A carriage return ends a `#` comment, so a line after one is no longer part of the comment.
+  * `0.a` selects `a` from `0`, as `0.` isn't a float, and `1.5e` is the float `1.5` followed by
+    `e` rather than an error.
+  * `a/(b)` and other `/`s that aren't followed by a path are divisions rather than errors.
+  * An operand can start with `!`: `a + !b` is `a + (!b)`.
+  * `let { … }` is a simple expression, so it can be an argument, an operand or a list element.
+  * After an interpolation, a path can contain `//`, and a `~` starts another path.
+* `Str::normalized_parts` gives strings the values Nix does: a carriage return in a `"…"` string
+  is a line feed, and an indented string's indentation is stripped around escapes like Nix does
+  ([#203](https://github.com/NixOS/rnix-parser/pull/203)).
+
 ## [v0.15.1] - 2026-10-28
 
 ### Changed
