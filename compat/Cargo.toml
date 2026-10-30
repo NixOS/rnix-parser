@@ -1,0 +1,16 @@
+[package]
+name = "rnix-compat"
+version = "0.0.0"
+description = "Compares rnix's parser with Nix's"
+publish = false
+edition = "2024"
+
+[dependencies]
+rnix = { path = ".." }
+
+[dev-dependencies]
+expect-test = "1.5.1"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
