@@ -43,13 +43,16 @@ To try that, run the following in your shell:
 echo "[hello nix]" | cargo run --quiet --example from-stdin
 ```
 
+rnix follows the parser of Nix, release by release. [compat](compat/README.md) compares the two.
+
 ## Release Checklist
 
 - [ ] In [CHANGELOG.md](CHANGELOG.md), add a `## [vX.Y.Z] - YYYY-MM-DD` heading below
       `## [Unreleased]`, add a `[vX.Y.Z]` compare link at the bottom, and point the `[Unreleased]`
       link at `vX.Y.Z...master`.
 - [ ] Bump `version` in [Cargo.toml](Cargo.toml).
-- [ ] Refresh the lockfiles: `cargo update -w && cargo update -w --manifest-path fuzz/Cargo.toml`.
+- [ ] Refresh the lockfiles: `cargo update -w`, and the same with `--manifest-path fuzz/Cargo.toml`
+      and `--manifest-path compat/Cargo.toml`.
 - [ ] Run `cargo test`, `nix build` and `cargo publish --dry-run`.
 - [ ] Commit as `chore: release vX.Y.Z` on a branch, open a PR, and add it to the merge queue.
 - [ ] Once it merges, tag the release commit `vX.Y.Z` and push the tag.
