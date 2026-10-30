@@ -1,0 +1,24 @@
+name: compat
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  nixpkgs:
+    name: nixpkgs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      # Every file in nixpkgs should parse like in Nix. The latest nixpkgs, rather than the one
+      # flake.lock pins, brings new code to compare every week.
+      - name: Compare rnix's parse of nixpkgs with Nix's
+        run: |
+          # shellcheck disable=SC2016 # the dev shell sets RNIX_COMPAT_NIXPKGS
+          nix develop .#compat --override-input nixpkgs github:NixOS/nixpkgs/nixos-unstable \
+            --command bash -c 'cargo run --release --locked --manifest-path compat/Cargo.toml -- --values "$RNIX_COMPAT_NIXPKGS"'
