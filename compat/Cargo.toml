@@ -11,6 +11,7 @@ rowan = "0.17"
 
 [dev-dependencies]
 expect-test = "1.5.1"
+hegeltest = "0.51"
 
 # Prevent this from interfering with workspaces
 [workspace]
