@@ -632,15 +632,19 @@ where
         checkpoint
     }
     fn parse_negate(&mut self) -> Checkpoint {
-        if self.peek() == Some(T![-]) {
-            let checkpoint = self.checkpoint();
-            self.start_node(NODE_UNARY_OP);
-            self.bump();
-            self.parse_negate();
-            self.finish_node();
-            checkpoint
-        } else {
-            self.parse_fn()
+        match self.peek() {
+            Some(T![-]) => {
+                let checkpoint = self.checkpoint();
+                self.start_node(NODE_UNARY_OP);
+                self.bump();
+                self.parse_negate();
+                self.finish_node();
+                checkpoint
+            }
+            // Like Nix, an operand of an operator that binds more tightly than `!` can start
+            // with one: `a + !b + c` is `a + !(b + c)`.
+            Some(TOKEN_INVERT) => self.parse_invert(),
+            _ => self.parse_fn(),
         }
     }
     fn parse_non_assoc(&mut self, next: fn(&mut Self) -> Checkpoint, ops: TokenSet) -> Checkpoint {

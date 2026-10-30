@@ -19,18 +19,17 @@ same            2/(3)
 same            a/"b"
 same            a/[ b ]
 same            c/{ }
-rnix-rejects    r/!b
-    rnix: unexpected TOKEN_INVERT at 2..3, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
+same            r/!b
 
 ### not-operand
-rnix-rejects    a + !b
-    rnix: unexpected TOKEN_INVERT at 4..5, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    -!a
-    rnix: unexpected TOKEN_INVERT at 1..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    a * !b
-    rnix: unexpected TOKEN_INVERT at 4..5, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    "" + !0
-    rnix: unexpected TOKEN_INVERT at 5..6, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
+same            a + !b
+same            -!a
+same            a * !b
+same            "" + !0
+same            a + !b + c
+same            -!a + b
+same            a * !b ? c
+same            a + !b == c
 
 ### legacy-let
 rnix-rejects    f let { body = 1; }

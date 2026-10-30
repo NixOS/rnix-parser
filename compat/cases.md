@@ -60,6 +60,10 @@ a + !b
 -!a
 a * !b
 "" + !0
+a + !b + c
+-!a + b
+a * !b ? c
+a + !b == c
 ```
 
 ### legacy-let
