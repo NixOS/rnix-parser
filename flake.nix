@@ -61,6 +61,8 @@
           fenixPkgs.minimal.cargo
           fenixPkgs.minimal.rustc
         ];
+        # The Nix release whose parser rnix follows, see compat/README.md
+        nixReference = pkgs.nixVersions.nix_2_35;
       in
       rec {
         # `nix develop`
@@ -76,6 +78,14 @@
           ];
           # libFuzzer needs libstdc++
           LD_LIBRARY_PATH = "${pkgs.stdenv.cc.cc.lib}/lib";
+        };
+
+        # `nix develop .#compat` - for comparing rnix's parser with Nix's, see compat/README.md
+        devShells.compat = pkgs.mkShell {
+          buildInputs = with pkgs; [ rustfmt rustc cargo clippy nixReference ];
+          # Nix's language tests, and the nixpkgs this flake locks
+          RNIX_COMPAT_NIX_SRC = nixReference.src;
+          RNIX_COMPAT_NIXPKGS = nixpkgs.outPath;
         };
 
         # `nix develop .#scripts` - for the GitHub Script code in .github/scripts
