@@ -98,6 +98,12 @@ rnix-rejects    a⟨NUL⟩b
     rnix: unexpected token at 1..3
 rnix-rejects    a⟨NUL⟩b ) c
     rnix: unexpected token at 1..7
+rnix-rejects    ./a⟨NUL⟩b
+    rnix: unexpected token at 3..5
+same            # c⟨NUL⟩d⟨LF⟩x
+same            /* ⟨NUL⟩ */ x
+both-reject     ⟨NUL⟩
+    nix: error: syntax error, unexpected end of file
 
 ### lambda-operand
 rnix-accepts    f x: x

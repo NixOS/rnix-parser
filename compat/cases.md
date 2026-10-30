@@ -111,11 +111,19 @@ produces still starts a line whose spaces get stripped.
 ### nul-end
 
 Outside a string, Nix takes a NUL character for the end of the input: it reads `a⟨NUL⟩b ) c`
-as `a`.
+as `a`. Its lexer returns a character it has no rule for as the token with that character's
+number, and token 0 is the end of the input to its parser. A NUL in a string used to end the
+string the same way ([NixOS/nix#12131](https://github.com/NixOS/nix/issues/12131)) until Nix 2.26
+made it an error ([NixOS/nix#12135](https://github.com/NixOS/nix/pull/12135)), but nothing changed
+outside strings. A NUL in a comment is part of the comment to both parsers.
 
 ```nix
 a⟨NUL⟩b
 a⟨NUL⟩b ) c
+./a⟨NUL⟩b
+# c⟨NUL⟩d⟨LF⟩x
+/* ⟨NUL⟩ */ x
+⟨NUL⟩
 ```
 
 ## Nix rejects these
@@ -188,7 +196,7 @@ Nix rejects an integer that doesn't fit in 64 bits, and a float that overflows o
 
 ### nul
 
-Nix rejects a NUL character in a string.
+Since 2.26, Nix rejects a NUL character in a string (see `nul-end`).
 
 ```nix
 "a⟨NUL⟩b"
