@@ -38,12 +38,25 @@ pub struct Nix {
 }
 
 impl Nix {
+    /// Finds a `nix-instantiate`, and checks that it parses: if it couldn't, every input would
+    /// look like one that only rnix accepts.
     pub fn new() -> io::Result<Self> {
         let program =
             env::var_os("RNIX_COMPAT_NIX_INSTANTIATE").unwrap_or_else(|| "nix-instantiate".into());
         let output = Command::new(&program).arg("--version").output()?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let error = format!("{} --version: {}", program.display(), stderr.trim());
+            return Err(io::Error::other(error));
+        }
         let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        Ok(Self { program, version })
+        let nix = Self { program, version };
+        let error = match nix.parse("1") {
+            Ok(shown) if shown == "1" => return Ok(nix),
+            Ok(shown) => format!("parses 1 as {shown:?}"),
+            Err(error) => format!("can't parse 1: {error}"),
+        };
+        Err(io::Error::other(format!("{} {error}", nix.program.display())))
     }
 
     /// What `nix-instantiate --version` says, e.g. `nix-instantiate (Nix) 2.35.3`.
