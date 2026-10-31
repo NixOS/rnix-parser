@@ -16,7 +16,9 @@ jobs:
         uses: cachix/install-nix-action@v31
 
       # Every file in nixpkgs should parse like in Nix. The latest nixpkgs, rather than the one
-      # flake.lock pins, brings new code to compare every week.
+      # flake.lock pins, brings new code to compare every week. It brings the Nix and the Rust
+      # too: the latest 2.35.x, which can be newer than the one the .expect files record, until
+      # nixpkgs drops nix_2_35. Then this fails, and it's time to follow the next Nix release.
       - name: Compare rnix's parse of nixpkgs with Nix's
         run: |
           # shellcheck disable=SC2016 # the dev shell sets RNIX_COMPAT_NIXPKGS
