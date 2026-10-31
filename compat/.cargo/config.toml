@@ -1,0 +1,3 @@
+# expect-test resolves paths against the outermost directory with a Cargo.toml, which is rnix's.
+[env]
+CARGO_WORKSPACE_DIR = { value = "", relative = true }
