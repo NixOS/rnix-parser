@@ -10,7 +10,9 @@ usage: rnix-compat [--values] [--jobs N] [--report FILE] [-e EXPR]... [PATH]...
 Compares rnix's parse of every .nix file under each PATH, and of each EXPR,
 with Nix's. Prints every input with an outcome other than `same` or
 `both-reject` (to FILE, with --report), then how often each outcome occurred.
-Exits with status 1 if rnix parses any input that Nix accepts differently.
+Exits with status 1 if rnix parses any input that Nix accepts differently,
+if compat itself fails on one (render-rejected, values-rejected), or if a file
+can't be read.
 
   --values  also compare the values of string and number literals
   --jobs N  compare N inputs at a time (default: one per CPU)
