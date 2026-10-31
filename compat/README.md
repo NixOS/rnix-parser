@@ -1,7 +1,7 @@
 # rnix-compat
 
-Compares rnix's parser with Nix's. rnix follows the parser of CppNix, the reference
-implementation of the Nix language, release by release: the release is `nixReference` in
+Compares rnix's parser with Nix's. rnix aims to parse like CppNix, the reference implementation
+of the Nix language, following its parser release by release: the release is `nixReference` in
 [`flake.nix`](../flake.nix). Where other implementations, such as Lix, differ from CppNix, rnix
 follows CppNix, and the differences are documented on the
 [wiki](https://github.com/NixOS/rnix-parser/wiki).

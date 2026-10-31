@@ -8,10 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-* rnix now follows the parser of Nix (CppNix) release by release, starting with Nix 2.35.
-  `compat/` compares the two parsers over nixpkgs, which rnix already parses like Nix does, over
-  Nix's language tests, and over the inputs in `compat/cases.md` on which they still disagree
-  ([#202](https://github.com/NixOS/rnix-parser/pull/202)).
+* rnix now aims to parse like Nix (CppNix), following its parser release by release, starting
+  with Nix 2.35. `compat/` compares the two parsers over nixpkgs, which rnix already parses like
+  Nix does, over Nix's language tests, and over the inputs in `compat/cases.md` on which they
+  still disagree ([#202](https://github.com/NixOS/rnix-parser/pull/202)).
 
 ## [v0.15.1] - 2026-10-28
 

@@ -43,7 +43,8 @@ To try that, run the following in your shell:
 echo "[hello nix]" | cargo run --quiet --example from-stdin
 ```
 
-rnix follows the parser of Nix, release by release. [compat](compat/README.md) compares the two.
+rnix aims to parse like Nix, following its parser release by release. [compat](compat/README.md)
+compares the two.
 
 ## Release Checklist
 
