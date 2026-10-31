@@ -130,8 +130,9 @@ a⟨NUL⟩b ) c
 
 Nix reads bytes: a string or a comment can hold bytes that aren't UTF-8, such as 0xFF. rnix only
 parses UTF-8, as `Root::parse` takes a `&str`, which is what rowan stores, so it can't parse such
-a file at all; `rnix-compat` reports it as `unreadable`, like Nix's `eval-fail-toJSON-non-utf-8.nix`
-in `nix-lang.expect`. The notation here writes characters, not bytes, so there are no inputs.
+a file at all: `rnix-compat` reports such a file that Nix accepts as `rnix-rejects`, like Nix's
+`eval-fail-toJSON-non-utf-8.nix` in `nix-lang.expect`. The notation here writes characters, not
+bytes, so there are no inputs.
 
 ## Nix rejects these
 

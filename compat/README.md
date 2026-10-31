@@ -45,7 +45,9 @@ made-up `HOME`, so that paths come out the same everywhere.
 | `render-rejected` | Nix rejects rnix's rendering of input it accepts: a bug in `render.rs` |
 | `values-rejected` | Nix can't evaluate the literals of input it accepts: a bug in `values.rs` |
 | `rnix-accepts` | rnix accepts the input and Nix doesn't (goal 2) |
-| `unreadable` | A file that can't be read, or isn't UTF-8, which is all rnix parses |
+| `unreadable` | A file that can't be read |
+
+rnix only parses UTF-8, so a file that isn't is `rnix-rejects` if Nix accepts it.
 
 ## Running
 
@@ -65,8 +67,8 @@ expect-test where to write the expectations in `tests/render.rs`, when it runs t
 
 `rnix-compat` lists the inputs on which the parsers disagree, counts the outcomes, and exits with
 status 1 if any input is `rnix-rejects`, `tree-differs`, `string-differs`, `number-differs`,
-`render-rejected` or `values-rejected`. With rnix 0.15.1 and Nix 2.35.3, every file in nixpkgs is
-`same`. To use another Nix, set `RNIX_COMPAT_NIX_INSTANTIATE`.
+`render-rejected`, `values-rejected` or `unreadable`. With rnix 0.15.1 and Nix 2.35.3, every file
+in nixpkgs is `same`. To use another Nix, set `RNIX_COMPAT_NIX_INSTANTIATE`.
 
 - [`cases.md`](cases.md) lists the inputs on which the parsers disagree, by cause, and inputs on
   which they agree but that are easy to get wrong. [`cases.expect`](cases.expect) records their

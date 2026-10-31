@@ -54,19 +54,23 @@ impl Nix {
     /// Parses `source`, returning Nix's rendering of the expression (`nix-instantiate --parse`),
     /// or the first line of the error.
     pub fn parse(&self, source: &str) -> Result<String, String> {
-        let shown = self
-            .run(&["--parse"], &format!("{PREFIX}{source}"))
-            .map_err(|error| above_prefix(&error))?;
+        self.parse_bytes(source.as_bytes())
+    }
+
+    /// Like [`parse`](Self::parse), for input that may not be UTF-8: Nix reads bytes.
+    pub fn parse_bytes(&self, source: &[u8]) -> Result<String, String> {
+        let stdin = [PREFIX.as_bytes(), source].concat();
+        let shown = self.run(&["--parse"], &stdin).map_err(|error| above_prefix(&error))?;
         let expr = shown.strip_prefix("(with { }; ").and_then(|s| s.strip_suffix(')'));
         Ok(expr.unwrap_or(&shown).to_string())
     }
 
     /// Evaluates `source` deeply, returning its value as JSON, or the first line of the error.
     pub fn eval_json(&self, source: &str) -> Result<String, String> {
-        self.run(&["--eval", "--strict", "--json"], source)
+        self.run(&["--eval", "--strict", "--json"], source.as_bytes())
     }
 
-    fn run(&self, args: &[&str], stdin: &str) -> Result<String, String> {
+    fn run(&self, args: &[&str], stdin: &[u8]) -> Result<String, String> {
         let mut child = Command::new(&self.program)
             .args(args)
             .args(["--store", "dummy://", "-"])
@@ -85,7 +89,7 @@ impl Nix {
             .unwrap_or_else(|e| panic!("can't run {}: {e}", self.program.display()));
         // Nix reads all of its input before it writes anything. If it exits without reading it,
         // the exit status says why.
-        let _ = child.stdin.take().unwrap().write_all(stdin.as_bytes());
+        let _ = child.stdin.take().unwrap().write_all(stdin);
         let output = child.wait_with_output().unwrap();
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).trim_end().to_string())

@@ -32,7 +32,7 @@ pub enum Outcome {
     ValuesRejected { nix: String },
     /// rnix accepts the input and Nix doesn't.
     RnixAccepts { nix: String },
-    /// The input is a file that can't be read, or isn't UTF-8, which is all rnix parses.
+    /// The input is a file that can't be read.
     Unreadable { error: String },
 }
 
@@ -58,8 +58,9 @@ impl Outcome {
         matches!(self, Outcome::Same | Outcome::BothReject { .. })
     }
 
-    /// Whether rnix parses input that Nix accepts differently from Nix. That is the first story
-    /// in `README.md`; rnix accepting input that Nix rejects is the second.
+    /// Whether rnix parses input that Nix accepts differently from Nix (the first goal in
+    /// `README.md`; rnix accepting input that Nix rejects is the second), compat has a bug, or a
+    /// file couldn't be compared at all.
     pub fn is_failure(&self) -> bool {
         matches!(
             self,
@@ -69,6 +70,7 @@ impl Outcome {
                 | Outcome::NumberDiffers { .. }
                 | Outcome::RenderRejected { .. }
                 | Outcome::ValuesRejected { .. }
+                | Outcome::Unreadable { .. }
         )
     }
 
@@ -151,11 +153,21 @@ impl Checker {
         }
     }
 
-    /// Compares rnix's parse of the file at `path` with Nix's.
+    /// Compares rnix's parse of the file at `path` with Nix's. rnix only parses UTF-8, so if Nix
+    /// accepts a file that isn't, rnix rejects it.
     pub fn check_file(&self, path: &Path) -> Outcome {
-        match fs::read_to_string(path) {
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(error) => return Outcome::Unreadable { error: error.to_string() },
+        };
+        match String::from_utf8(bytes) {
             Ok(source) => self.check(&source),
-            Err(error) => Outcome::Unreadable { error: error.to_string() },
+            Err(error) => match self.nix.parse_bytes(error.as_bytes()) {
+                Ok(_) => {
+                    Outcome::RnixRejects { rnix: format!("not UTF-8: {}", error.utf8_error()) }
+                }
+                Err(nix) => Outcome::BothReject { nix },
+            },
         }
     }
 }
