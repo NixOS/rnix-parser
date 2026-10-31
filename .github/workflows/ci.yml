@@ -80,6 +80,14 @@ jobs:
       - name: Compare rnix's parser with Nix's
         run: nix develop .#compat --command cargo test --locked --manifest-path compat/Cargo.toml
 
+      - name: Check compat's formatting
+        run: nix develop .#compat --command cargo fmt --manifest-path compat/Cargo.toml -- --check
+
+      - name: Run Clippy on compat
+        run: >-
+          nix develop .#compat --command
+          cargo clippy --locked --manifest-path compat/Cargo.toml --all-targets -- -D warnings
+
   scripts:
     name: scripts
     runs-on: ubuntu-latest
