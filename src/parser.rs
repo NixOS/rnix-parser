@@ -444,6 +444,14 @@ where
                 self.parse_set(T!['}']);
                 self.finish_node();
             }
+            // `let { … }`, an old form of `rec { … }.body`
+            T![let] => {
+                self.start_node(NODE_LEGACY_LET);
+                self.bump();
+                self.expect(T!['{']);
+                self.parse_set(T!['}']);
+                self.finish_node();
+            }
             T!['{'] => {
                 // Do a lookahead:
                 let mut peek = [None, None];
@@ -517,11 +525,15 @@ where
 
                 if is_complex_path {
                     loop {
-                        match self.peek_raw().map(|(t, _)| t) {
-                            Some(TOKEN_PATH_ABS) | Some(TOKEN_PATH_REL) | Some(TOKEN_PATH_HOME) => {
+                        match self.peek_raw() {
+                            // The rest of the path. Like Nix, a `~` after an interpolation starts
+                            // another path: `./${a}~/b` is `./${a}` applied to `~/b`.
+                            Some(&(TOKEN_PATH_ABS | TOKEN_PATH_REL | TOKEN_PATH_HOME, text))
+                                if !text.starts_with('~') =>
+                            {
                                 self.bump()
                             }
-                            Some(TOKEN_INTERPOL_START) => {
+                            Some(&(TOKEN_INTERPOL_START, _)) => {
                                 self.start_node(NODE_INTERPOL);
                                 self.bump();
                                 self.parse_expr();
@@ -621,10 +633,14 @@ where
 
         checkpoint
     }
+    /// Whether the next tokens start `let { … }`, which Nix parses like any simple expression.
+    fn at_legacy_let(&mut self) -> bool {
+        self.peek() == Some(T![let]) && self.peek_ahead(1) == Some(T!['{'])
+    }
     fn parse_fn(&mut self) -> Checkpoint {
         let checkpoint = self.parse_simple();
 
-        while self.peek().map(|t| t.is_fn_arg()).unwrap_or(false) {
+        while self.peek().map(|t| t.is_fn_arg()).unwrap_or(false) || self.at_legacy_let() {
             self.start_node_at(checkpoint, NODE_APPLY);
             self.parse_simple();
             self.finish_node();
@@ -632,15 +648,19 @@ where
         checkpoint
     }
     fn parse_negate(&mut self) -> Checkpoint {
-        if self.peek() == Some(T![-]) {
-            let checkpoint = self.checkpoint();
-            self.start_node(NODE_UNARY_OP);
-            self.bump();
-            self.parse_negate();
-            self.finish_node();
-            checkpoint
-        } else {
-            self.parse_fn()
+        match self.peek() {
+            Some(T![-]) => {
+                let checkpoint = self.checkpoint();
+                self.start_node(NODE_UNARY_OP);
+                self.bump();
+                self.parse_negate();
+                self.finish_node();
+                checkpoint
+            }
+            // Like Nix, an operand of an operator that binds more tightly than `!` can start
+            // with one: `a + !b + c` is `a + !(b + c)`.
+            Some(TOKEN_INVERT) => self.parse_invert(),
+            _ => self.parse_fn(),
         }
     }
     fn parse_non_assoc(&mut self, next: fn(&mut Self) -> Checkpoint, ops: TokenSet) -> Checkpoint {
@@ -753,21 +773,13 @@ where
         }
         self.depth += 1;
         let out = match self.peek() {
-            Some(T![let]) => {
+            Some(T![let]) if !self.at_legacy_let() => {
                 let checkpoint = self.checkpoint();
                 self.bump();
-
-                if self.peek() == Some(T!['{']) {
-                    self.start_node_at(checkpoint, NODE_LEGACY_LET);
-                    self.bump();
-                    self.parse_set(T!['}']);
-                    self.finish_node();
-                } else {
-                    self.start_node_at(checkpoint, NODE_LET_IN);
-                    self.parse_set(T![in]);
-                    self.parse_expr();
-                    self.finish_node();
-                }
+                self.start_node_at(checkpoint, NODE_LET_IN);
+                self.parse_set(T![in]);
+                self.parse_expr();
+                self.finish_node();
                 checkpoint
             }
             Some(T![with]) => {

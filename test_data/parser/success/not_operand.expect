@@ -1,0 +1,36 @@
+NODE_ROOT@0..22
+  NODE_LIST@0..22
+    TOKEN_L_BRACK@0..1 "["
+    TOKEN_WHITESPACE@1..2 " "
+    NODE_PAREN@2..14
+      TOKEN_L_PAREN@2..3 "("
+      NODE_BIN_OP@3..13
+        NODE_IDENT@3..4
+          TOKEN_IDENT@3..4 "a"
+        TOKEN_WHITESPACE@4..5 " "
+        TOKEN_ADD@5..6 "+"
+        TOKEN_WHITESPACE@6..7 " "
+        NODE_UNARY_OP@7..13
+          TOKEN_INVERT@7..8 "!"
+          NODE_BIN_OP@8..13
+            NODE_IDENT@8..9
+              TOKEN_IDENT@8..9 "b"
+            TOKEN_WHITESPACE@9..10 " "
+            TOKEN_ADD@10..11 "+"
+            TOKEN_WHITESPACE@11..12 " "
+            NODE_IDENT@12..13
+              TOKEN_IDENT@12..13 "c"
+      TOKEN_R_PAREN@13..14 ")"
+    TOKEN_WHITESPACE@14..15 " "
+    NODE_PAREN@15..20
+      TOKEN_L_PAREN@15..16 "("
+      NODE_UNARY_OP@16..19
+        TOKEN_SUB@16..17 "-"
+        NODE_UNARY_OP@17..19
+          TOKEN_INVERT@17..18 "!"
+          NODE_IDENT@18..19
+            TOKEN_IDENT@18..19 "d"
+      TOKEN_R_PAREN@19..20 ")"
+    TOKEN_WHITESPACE@20..21 " "
+    TOKEN_R_BRACK@21..22 "]"
+

@@ -1,97 +1,73 @@
 nix-instantiate (Nix) 2.35.3
 
 ### zero-dot
-tree-differs    0.a
-    nix: (0).a
-    rnix: (0 a)
-tree-differs    0.e1
-    nix: (0).e1
-    rnix: 0
-tree-differs    x: x.a 0.a
-    nix: (x: ((x).a (0).a))
-    rnix: (x: ((x).a 0 a))
-rnix-accepts    [ 0. ]
+same            0.a
+same            0.e1
+same            x: x.a 0.a
+both-reject     [ 0. ]
     nix: error: syntax error, unexpected ']', expecting identifier or 'or' or '${' or '"'
 
 ### float-exponent
-rnix-rejects    1.5e
-    rnix: unexpected TOKEN_ERROR at 0..4, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    1.5ea
-    rnix: unexpected TOKEN_ERROR at 0..4, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    .5e != a
-    rnix: unexpected TOKEN_ERROR at 0..3, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    f 1.e
-    rnix: unexpected token at 2..5
+same            1.5e
+same            1.5ea
+same            .5e != a
+same            f 1.e
 
 ### slash-operand
-rnix-rejects    a/(b)
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    2/(3)
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    a/"b"
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    a/[ b ]
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    c/{ }
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    r/!b
-    rnix: unexpected TOKEN_ERROR at 0..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
+same            a/(b)
+same            2/(3)
+same            a/"b"
+same            a/[ b ]
+same            c/{ }
+same            r/!b
+
+### path-double-slash
+same            ./${a}//b
+same            ./a/${b}//c
+same            /${a}./b//c
+both-reject     ./a//b
+    nix: error: syntax error, unexpected end of path, expecting '${'
+both-reject     ./${a}//
+    nix: error: path has a trailing slash
+
+### path-then-home
+same            /${l}~/${a} or
+same            ./${a}~/b
+same            ~/${a}~/${b}
 
 ### not-operand
-rnix-rejects    a + !b
-    rnix: unexpected TOKEN_INVERT at 4..5, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    -!a
-    rnix: unexpected TOKEN_INVERT at 1..2, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    a * !b
-    rnix: unexpected TOKEN_INVERT at 4..5, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
-rnix-rejects    "" + !0
-    rnix: unexpected TOKEN_INVERT at 5..6, wanted any of [TOKEN_L_PAREN, TOKEN_REC, TOKEN_L_BRACE, TOKEN_L_BRACK, TOKEN_STRING_START, TOKEN_IDENT]
+same            a + !b
+same            -!a
+same            a * !b
+same            "" + !0
+same            a + !b + c
+same            -!a + b
+same            a * !b ? c
+same            a + !b == c
 
 ### legacy-let
-rnix-rejects    f let { body = 1; }
-    rnix: unexpected token at 2..19
-rnix-rejects    let { body = 1; }.body
-    rnix: unexpected token at 17..22
-rnix-rejects    let { } == x
-    rnix: unexpected token at 8..12
-tree-differs    e: let { } or
-    nix: (e: ((rec { }).body or))
-    rnix: ((e: (rec { }).body) or)
+same            f let { body = 1; }
+same            let { body = 1; }.body
+same            let { } == x
+same            e: let { } or
+same            [ let { body = 1; } ]
+same            -let { body = 1; }
 
 ### comment-cr
-tree-differs    f # c⟨CR⟩x
-    nix: (f x)
-    rnix: f
-rnix-rejects    # c⟨CR⟩x
-    rnix: unexpected end of file
-tree-differs    1 # a⟨CR⟩+ 2
-    nix: (1 + 2)
-    rnix: 1
+same            f # c⟨CR⟩x
+same            # c⟨CR⟩x
+same            1 # a⟨CR⟩+ 2
 
 ### string-cr
-string-differs  "a⟨CR⟩b"
-    literal: "a⟨CR⟩b"
-    nix: "a\nb"
-    rnix: "a\rb"
-string-differs  "a⟨CR⟩⟨LF⟩b"
-    literal: "a⟨CR⟩⟨LF⟩b"
-    nix: "a\nb"
-    rnix: "a\r\nb"
+same            "a⟨CR⟩b"
+same            "a⟨CR⟩⟨LF⟩b"
 same            ''a⟨CR⟩⟨LF⟩b''
 
 ### indented-escape
-string-differs  ''  ''\n ''
-    literal: ''  ''\n ''
-    nix: "\n"
-    rnix: "\n "
-string-differs  ''''\⟨LF⟩ ''
-    literal: ''''\⟨LF⟩ ''
-    nix: "\n "
-    rnix: "\n"
-string-differs  ''  ''\⟨LF⟩a⟨TAB⟩''
-    literal: ''  ''\⟨LF⟩a⟨TAB⟩''
-    nix: "\na\t"
-    rnix: "  \na\t"
+same            ''  ''\n ''
+same            ''''\⟨LF⟩ ''
+same            ''  ''\⟨LF⟩a⟨TAB⟩''
+same            ''a''\⟨CR⟩b''
 
 ### nul-end
 rnix-rejects    a⟨NUL⟩b

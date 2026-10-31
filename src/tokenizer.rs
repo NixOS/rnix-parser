@@ -176,12 +176,19 @@ impl Tokenizer<'_> {
         }
     }
 
-    fn check_path_since(&mut self, past: State, kind: SyntaxKind) -> SyntaxKind {
+    /// Consumes the rest of a path's text, up to an interpolation or the end of the path. Like
+    /// Nix, a path can't end with `/`, and can only contain `//` after an interpolation.
+    fn check_path_since(
+        &mut self,
+        past: State,
+        kind: SyntaxKind,
+        interpolated: bool,
+    ) -> SyntaxKind {
         self.consume(is_valid_path_char);
         let path_str = self.str_since(past);
         if self.remaining().starts_with("${") {
             self.ctx.push(Context::InterpolStart);
-        } else if path_str.ends_with('/') || path_str.contains("//") {
+        } else if path_str.ends_with('/') || (!interpolated && path_str.contains("//")) {
             return TOKEN_ERROR;
         } else {
             self.pop_ctx(Context::Path(kind));
@@ -210,7 +217,7 @@ impl Tokenizer<'_> {
                     // Search paths (<nixpkgs>) don't support interpolation
                     if path_kind == TOKEN_PATH_SEARCH {
                         if self.peek().is_some_and(is_valid_path_char) {
-                            return Some(self.check_path_since(start, path_kind));
+                            return Some(self.check_path_since(start, path_kind, false));
                         } else {
                             self.pop_ctx(Context::Path(path_kind));
                         }
@@ -218,7 +225,8 @@ impl Tokenizer<'_> {
                         self.ctx.push(Context::Interpol { brackets: 0 });
                         return Some(TOKEN_INTERPOL_START);
                     } else if self.peek().is_some_and(is_valid_path_char) {
-                        return Some(self.check_path_since(start, path_kind));
+                        // The path's text after an interpolation.
+                        return Some(self.check_path_since(start, path_kind, true));
                     } else {
                         self.pop_ctx(Context::Path(path_kind));
                     }
@@ -262,7 +270,8 @@ impl Tokenizer<'_> {
         }
 
         if self.peek() == Some('#') {
-            self.consume(|c| c != '\n');
+            // Like Nix, a carriage return ends a comment too.
+            self.consume(|c| c != '\n' && c != '\r');
             return Some(TOKEN_COMMENT);
         }
         if self.starts_with_bump("/*") {
@@ -319,15 +328,15 @@ impl Tokenizer<'_> {
                     (offset + c.len_utf8(), contains_underscore || c == '_')
                 });
 
-            let mut lookahead = remaining[skipped_len..].chars();
+            let after = &remaining[skipped_len..];
+            let mut lookahead = after.chars();
 
             match (lookahead.next(), lookahead.next()) {
-                // a//b parses as Update(a, b)
-                (Some('/'), Some('/')) => None,
-                (Some('/'), Some('*')) => None,
-                (Some('/'), Some(c)) if !c.is_whitespace() => {
-                    // If the first character of the yet‑to‑be‑consumed token was '/', we treat it as absolute later.
-                    // Otherwise it's a relative path.
+                // Like Nix, a path needs a path character or an interpolation after a `/`: `a//b`
+                // is `a // b`, `a/(b)` is `a / (b)`, and `a/*b*/` is `a` followed by a comment.
+                (Some('/'), Some(c))
+                    if (c != '/' && is_valid_path_char(c)) || after.starts_with("/${") =>
+                {
                     Some(IdentType::PathRel)
                 }
                 (Some('>'), _) => Some(IdentType::PathSearch),
@@ -366,7 +375,7 @@ impl Tokenizer<'_> {
 
                 // Store the kind in context so subsequent segments are consistent
                 self.push_ctx(Context::Path(token_kind));
-                self.check_path_since(start, token_kind)
+                self.check_path_since(start, token_kind, false)
             });
         }
 
@@ -406,7 +415,8 @@ impl Tokenizer<'_> {
             '.' => {
                 if self.peek().is_some_and(|x| x.is_ascii_digit()) {
                     self.consume(|c| c.is_ascii_digit());
-                    self.consume_scientific()
+                    self.consume_exponent();
+                    TOKEN_FLOAT
                 } else {
                     TOKEN_DOT
                 }
@@ -519,40 +529,39 @@ impl Tokenizer<'_> {
                 TOKEN_STRING_START
             }
             fst @ '0'..='9' => {
-                // Due to nix's behavior on leading 0's we know immediately
-                // That a '0' followed by some other number character MUST tokenize into an INT.
-                // More background on this: https://github.com/NixOS/rnix-parser/issues/157
-                if fst == '0' && self.peek() != Some('.') {
-                    // In that case just consume the remaining number characters to fill the TOKEN_INTEGER
-                    self.consume(|c| c.is_ascii_digit());
-                    TOKEN_INTEGER
-                } else {
-                    // If we are not in that edge-case we can just continue with the regular number tokenization
-                    self.consume(|c| c.is_ascii_digit());
-                    if self.peek() == Some('.') {
-                        self.next().unwrap();
-                        self.consume(|c| c.is_ascii_digit());
-                        self.consume_scientific()
-                    } else {
-                        TOKEN_INTEGER
+                self.consume(|c| c.is_ascii_digit());
+                let integer = self.str_since(start);
+                let fraction = self
+                    .remaining()
+                    .strip_prefix('.')
+                    .map(|rest| rest.bytes().take_while(u8::is_ascii_digit).count());
+                // Like Nix's, a float is `[1-9][0-9]*\.[0-9]*` or `0?\.[0-9]+`: `1.` is a float,
+                // but `0.a` selects `a` from `0`, and `00.5` is `00 .5`. More background on this:
+                // https://github.com/NixOS/rnix-parser/issues/157
+                match fraction {
+                    Some(digits) if fst != '0' || (integer == "0" && digits > 0) => {
+                        self.state.offset += 1 + digits;
+                        self.consume_exponent();
+                        TOKEN_FLOAT
                     }
+                    _ => TOKEN_INTEGER,
                 }
             }
             _ => TOKEN_ERROR,
         })
     }
 
-    fn consume_scientific(&mut self) -> SyntaxKind {
-        if self.peek() == Some('e') || self.peek() == Some('E') {
-            self.next().unwrap();
-            if self.peek() == Some('-') || self.peek() == Some('+') {
-                self.next().unwrap();
-            }
-            if self.consume(|c| c.is_ascii_digit()) == 0 {
-                return TOKEN_ERROR;
-            }
+    /// Consumes a float's exponent, if it has one. Like Nix, an exponent needs digits: `1.5e` is
+    /// `1.5` followed by `e`.
+    fn consume_exponent(&mut self) {
+        let rest = self.remaining().as_bytes();
+        let digits = if matches!(rest.get(1), Some(b'+' | b'-')) { 2 } else { 1 };
+        if matches!(rest.first(), Some(b'e' | b'E'))
+            && rest.get(digits).is_some_and(u8::is_ascii_digit)
+        {
+            self.state.offset += digits;
+            self.consume(|c| c.is_ascii_digit());
         }
-        TOKEN_FLOAT
     }
 }
 

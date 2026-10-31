@@ -1,0 +1,54 @@
+NODE_ROOT@0..42
+  NODE_LIST@0..42
+    TOKEN_L_BRACK@0..1 "["
+    TOKEN_WHITESPACE@1..2 " "
+    NODE_PAREN@2..23
+      TOKEN_L_PAREN@2..3 "("
+      NODE_APPLY@3..22
+        NODE_IDENT@3..4
+          TOKEN_IDENT@3..4 "f"
+        TOKEN_WHITESPACE@4..5 " "
+        NODE_LEGACY_LET@5..22
+          TOKEN_LET@5..8 "let"
+          TOKEN_WHITESPACE@8..9 " "
+          TOKEN_L_BRACE@9..10 "{"
+          TOKEN_WHITESPACE@10..11 " "
+          NODE_ATTRPATH_VALUE@11..20
+            NODE_ATTRPATH@11..15
+              NODE_IDENT@11..15
+                TOKEN_IDENT@11..15 "body"
+            TOKEN_WHITESPACE@15..16 " "
+            TOKEN_ASSIGN@16..17 "="
+            TOKEN_WHITESPACE@17..18 " "
+            NODE_LITERAL@18..19
+              TOKEN_INTEGER@18..19 "1"
+            TOKEN_SEMICOLON@19..20 ";"
+          TOKEN_WHITESPACE@20..21 " "
+          TOKEN_R_BRACE@21..22 "}"
+      TOKEN_R_PAREN@22..23 ")"
+    TOKEN_WHITESPACE@23..24 " "
+    NODE_SELECT@24..40
+      NODE_LEGACY_LET@24..38
+        TOKEN_LET@24..27 "let"
+        TOKEN_WHITESPACE@27..28 " "
+        TOKEN_L_BRACE@28..29 "{"
+        TOKEN_WHITESPACE@29..30 " "
+        NODE_ATTRPATH_VALUE@30..36
+          NODE_ATTRPATH@30..31
+            NODE_IDENT@30..31
+              TOKEN_IDENT@30..31 "a"
+          TOKEN_WHITESPACE@31..32 " "
+          TOKEN_ASSIGN@32..33 "="
+          TOKEN_WHITESPACE@33..34 " "
+          NODE_LITERAL@34..35
+            TOKEN_INTEGER@34..35 "2"
+          TOKEN_SEMICOLON@35..36 ";"
+        TOKEN_WHITESPACE@36..37 " "
+        TOKEN_R_BRACE@37..38 "}"
+      TOKEN_DOT@38..39 "."
+      NODE_ATTRPATH@39..40
+        NODE_IDENT@39..40
+          TOKEN_IDENT@39..40 "a"
+    TOKEN_WHITESPACE@40..41 " "
+    TOKEN_R_BRACK@41..42 "]"
+

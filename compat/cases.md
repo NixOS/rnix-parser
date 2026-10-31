@@ -10,10 +10,13 @@ characters that would break the line or be invisible.
 
 ## Nix accepts these
 
+rnix now parses all of these like Nix does, but for `nul-end`, on purpose, and `not-utf8`, which it
+can't.
+
 ### zero-dot
 
 A float literal needs a digit from 1 to 9 before a bare `.` (`1.` is a float, `0.` isn't), so
-Nix reads `0.a` as selecting `a` from `0`. rnix reads the float `0.` applied to `a`. Lix rejects
+Nix reads `0.a` as selecting `a` from `0`. rnix read the float `0.` applied to `a`. Lix rejects
 `0.a`.
 
 ```nix
@@ -26,7 +29,7 @@ x: x.a 0.a
 ### float-exponent
 
 An exponent needs digits. Nix reads `1.5e` as the float `1.5` followed by the variable `e`; rnix
-rejects the token.
+rejected the token.
 
 ```nix
 1.5e
@@ -38,7 +41,7 @@ f 1.e
 ### slash-operand
 
 `a/b` is a path, but a `/` followed by something other than a path character is division. rnix
-reads anything but whitespace after `/` as part of a path.
+read anything but whitespace after `/` as part of a path.
 
 ```nix
 a/(b)
@@ -49,10 +52,35 @@ c/{ }
 r/!b
 ```
 
+### path-double-slash
+
+After an interpolation, Nix's lexer reads the rest of a path a `/` or a name at a time, so the
+path can contain `//`. Before one, it can't, and no path can end with `/`.
+
+```nix
+./${a}//b
+./a/${b}//c
+/${a}./b//c
+./a//b
+./${a}//
+```
+
+### path-then-home
+
+A `~` doesn't continue a path, so after an interpolation it starts another one: Nix reads
+`./${a}~/b` as `./${a}` applied to `~/b`. rnix made them one path. The comparison only sees it
+when something like `or` follows, because rnix's rendering writes a path as it is.
+
+```nix
+/${l}~/${a} or
+./${a}~/b
+~/${a}~/${b}
+```
+
 ### not-operand
 
 Nix accepts `!` at the start of any operand: `a + !b` is `a + (!b)`, and `-!a` is `-(!a)`. rnix
-only accepts it at the start of an operand of `//`, `==`, `&&` and the other operators that bind
+only accepted it at the start of an operand of `//`, `==`, `&&` and the other operators that bind
 more loosely than `!`.
 
 ```nix
@@ -60,24 +88,30 @@ a + !b
 -!a
 a * !b
 "" + !0
+a + !b + c
+-!a + b
+a * !b ? c
+a + !b == c
 ```
 
 ### legacy-let
 
 `let { … }` is a simple expression in Nix: it can be applied, selected from, or followed by
-`or`. rnix only parses it where an expression starts, and doesn't continue after it.
+`or`. rnix only parsed it where an expression starts, and didn't continue after it.
 
 ```nix
 f let { body = 1; }
 let { body = 1; }.body
 let { } == x
 e: let { } or
+[ let { body = 1; } ]
+-let { body = 1; }
 ```
 
 ### comment-cr
 
 A carriage return ends a `#` comment in Nix (see Nix's `parse-okay-crlf.nix`). rnix's comment
-runs to the next line feed.
+ran to the next line feed.
 
 ```nix
 f # c⟨CR⟩x
@@ -106,6 +140,7 @@ produces still starts a line whose spaces get stripped.
 ''  ''\n ''
 ''''\⟨LF⟩ ''
 ''  ''\⟨LF⟩a⟨TAB⟩''
+''a''\⟨CR⟩b''
 ```
 
 ### nul-end
@@ -116,6 +151,9 @@ number, and token 0 is the end of the input to its parser. A NUL in a string use
 string the same way ([NixOS/nix#12131](https://github.com/NixOS/nix/issues/12131)) until Nix 2.26
 made it an error ([NixOS/nix#12135](https://github.com/NixOS/nix/pull/12135)), but nothing changed
 outside strings. A NUL in a comment is part of the comment to both parsers.
+
+rnix reports an error for a NUL outside a string and comment on purpose: following Nix would
+mean ignoring whatever comes after it.
 
 ```nix
 a⟨NUL⟩b

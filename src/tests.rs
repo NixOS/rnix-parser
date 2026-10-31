@@ -72,6 +72,22 @@ fn t_macro() {
     assert!(matches!(SyntaxKind::TOKEN_L_PAREN, T!['(']));
 }
 
+#[test]
+fn comment_ends_at_carriage_return() {
+    // Not in test_data, where Git might change line endings.
+    let tokens: Vec<_> = tokenize("f # c\rx").collect();
+    assert_eq!(
+        tokens,
+        [
+            (SyntaxKind::TOKEN_IDENT, "f"),
+            (SyntaxKind::TOKEN_WHITESPACE, " "),
+            (SyntaxKind::TOKEN_COMMENT, "# c"),
+            (SyntaxKind::TOKEN_WHITESPACE, "\r"),
+            (SyntaxKind::TOKEN_IDENT, "x"),
+        ]
+    );
+}
+
 fn dir_tests<F>(dir: &str, get_actual: F)
 where
     F: Fn(String) -> String,
