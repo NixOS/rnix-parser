@@ -106,10 +106,21 @@ fn json_string(s: &str) -> String {
             '\n' => out.push_str("\\n"),
             '\r' => out.push_str("\\r"),
             '\t' => out.push_str("\\t"),
+            '\u{8}' => out.push_str("\\b"),
+            '\u{c}' => out.push_str("\\f"),
             c if u32::from(c) < 0x20 => out.push_str(&format!("\\u{:04x}", u32::from(c))),
             c => out.push(c),
         }
     }
     out.push('"');
     out
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn json_string_like_nix() {
+        // What `nix-instantiate --eval --json` prints for this string.
+        assert_eq!(super::json_string("a\u{8}b\u{c}c\u{1}d\u{7f}"), "\"a\\bb\\fc\\u0001d\u{7f}\"");
+    }
 }
