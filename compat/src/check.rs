@@ -24,6 +24,9 @@ pub enum Outcome {
     StringDiffers { literal: String, nix: String, rnix: String },
     /// Nix rejects rnix's rendering of input it accepts: a bug in [`render`].
     RenderRejected { nix: String, rendering: String },
+    /// Nix can't evaluate the string literals of input it accepts, with their interpolations
+    /// replaced: a bug in the comparison of string values.
+    StringsRejected { nix: String },
     /// rnix accepts the input and Nix doesn't.
     RnixAccepts { nix: String },
     /// The input is a file that can't be read, or isn't UTF-8, which is all rnix parses.
@@ -40,6 +43,7 @@ impl Outcome {
             Outcome::TreeDiffers { .. } => "tree-differs",
             Outcome::StringDiffers { .. } => "string-differs",
             Outcome::RenderRejected { .. } => "render-rejected",
+            Outcome::StringsRejected { .. } => "strings-rejected",
             Outcome::RnixAccepts { .. } => "rnix-accepts",
             Outcome::Unreadable { .. } => "unreadable",
         }
@@ -59,13 +63,16 @@ impl Outcome {
                 | Outcome::TreeDiffers { .. }
                 | Outcome::StringDiffers { .. }
                 | Outcome::RenderRejected { .. }
+                | Outcome::StringsRejected { .. }
         )
     }
 
     fn details(&self) -> Vec<(&'static str, &str)> {
         match self {
             Outcome::Same => vec![],
-            Outcome::BothReject { nix } | Outcome::RnixAccepts { nix } => vec![("nix", nix)],
+            Outcome::BothReject { nix }
+            | Outcome::RnixAccepts { nix }
+            | Outcome::StringsRejected { nix } => vec![("nix", nix)],
             Outcome::RnixRejects { rnix } => vec![("rnix", rnix)],
             Outcome::TreeDiffers { nix, rnix } => vec![("nix", nix), ("rnix", rnix)],
             Outcome::StringDiffers { literal, nix, rnix } => {
@@ -123,10 +130,11 @@ impl Checker {
                     Ok(rnix) if rnix != nix => Outcome::TreeDiffers { nix, rnix },
                     Ok(_) if !self.strings => Outcome::Same,
                     Ok(_) => match strings::compare(&self.nix, &parse.syntax()) {
-                        Some(Difference { literal, nix, rnix }) => {
+                        Ok(Some(Difference { literal, nix, rnix })) => {
                             Outcome::StringDiffers { literal, nix, rnix }
                         }
-                        None => Outcome::Same,
+                        Ok(None) => Outcome::Same,
+                        Err(nix) => Outcome::StringsRejected { nix },
                     },
                 }
             }

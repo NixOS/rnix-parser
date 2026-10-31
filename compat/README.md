@@ -38,6 +38,7 @@ made-up `HOME`, so that paths come out the same everywhere.
 | `tree-differs` | Both accept the input, and parse it to different expressions (goal 1) |
 | `string-differs` | Same expression, but a string literal has another value (goal 1) |
 | `render-rejected` | Nix rejects rnix's rendering of input it accepts: a bug in `render.rs` |
+| `strings-rejected` | Nix can't evaluate the string literals of input it accepts: a bug in `strings.rs` |
 | `rnix-accepts` | rnix accepts the input and Nix doesn't (goal 2) |
 | `unreadable` | A file that can't be read, or isn't UTF-8, which is all rnix parses |
 
@@ -55,7 +56,8 @@ cargo run --release -- --strings "$RNIX_COMPAT_NIXPKGS"    # all of nixpkgs, a f
 ```
 
 `rnix-compat` lists the inputs on which the parsers disagree, counts the outcomes, and exits with
-status 1 if any input is `rnix-rejects`, `tree-differs`, `string-differs` or `render-rejected`. With
+status 1 if any input is `rnix-rejects`, `tree-differs`, `string-differs`, `render-rejected` or
+`strings-rejected`. With
 rnix 0.15.1 and Nix 2.35.3, every file in nixpkgs is `same`. To use another Nix, set
 `RNIX_COMPAT_NIX_INSTANTIATE`.
 

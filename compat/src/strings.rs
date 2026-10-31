@@ -22,12 +22,13 @@ pub struct Difference {
 }
 
 /// Compares the value of every string literal in `root`, which rnix parsed without errors, with
-/// Nix's value for it, and returns the first one that differs.
-pub fn compare(nix: &Nix, root: &SyntaxNode) -> Option<Difference> {
+/// Nix's value for it, and returns the first one that differs, or Nix's error if it can't
+/// evaluate them.
+pub fn compare(nix: &Nix, root: &SyntaxNode) -> Result<Option<Difference>, String> {
     let literals: Vec<SyntaxNode> =
         root.descendants().filter(|node| node.kind() == NODE_STRING).collect();
     if literals.is_empty() {
-        return None;
+        return Ok(None);
     }
     let sources: Vec<String> = literals.iter().map(with_holes).collect();
     let values: Vec<String> = literals.iter().map(rnix_value).collect();
@@ -42,18 +43,15 @@ pub fn compare(nix: &Nix, root: &SyntaxNode) -> Option<Difference> {
         sources.iter().map(|s| format!("({s})")).collect::<Vec<_>>().join(" "),
         values.iter().map(|v| nix_string(v)).collect::<Vec<_>>().join(" "),
     );
-    let i: usize = match nix.eval_json(&first_difference) {
-        Ok(json) if json == "null" => return None,
-        Ok(json) => json.parse().unwrap(),
-        Err(error) => {
-            return Some(Difference { literal: String::new(), nix: error, rnix: String::new() });
-        }
+    let i: usize = match nix.eval_json(&first_difference)?.as_str() {
+        "null" => return Ok(None),
+        json => json.parse().unwrap(),
     };
-    Some(Difference {
+    Ok(Some(Difference {
         literal: literals[i].text().to_string(),
         nix: nix.eval_json(&sources[i]).unwrap_or_else(|error| error),
         rnix: json_string(&values[i]),
-    })
+    }))
 }
 
 /// The source of `literal`, with a [`HOLE`] for each interpolation.
