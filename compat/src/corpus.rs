@@ -7,10 +7,11 @@ use std::{
     thread,
 };
 
-/// The `.nix` files under `path` (or `path` itself, if it's a file), sorted.
+/// The `.nix` files under `path` (or `path` itself, if it's a file), sorted. A path that doesn't
+/// exist is an error.
 pub fn nix_files(path: &Path) -> io::Result<Vec<PathBuf>> {
     let mut files = Vec::new();
-    if path.is_dir() {
+    if fs::metadata(path)?.is_dir() {
         walk(path, &mut files)?;
     } else {
         files.push(path.to_owned());
@@ -53,4 +54,12 @@ pub fn par_map<T: Sync, R: Send>(items: &[T], jobs: usize, f: impl Fn(&T) -> R +
     });
     results.sort_by_key(|(i, _)| *i);
     results.into_iter().map(|(_, result)| result).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn missing_path() {
+        assert!(super::nix_files("/nonexistent".as_ref()).is_err());
+    }
 }
