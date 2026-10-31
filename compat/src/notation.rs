@@ -1,5 +1,5 @@
 //! A notation for writing any input on one line: `⟨LF⟩`, `⟨CR⟩`, `⟨TAB⟩`, `⟨NUL⟩` and `⟨U+XXXX⟩`
-//! stand for characters that would break the line or be invisible.
+//! stand for characters that would break the line or be invisible, and for `⟨` itself.
 
 /// Writes `s` on one line.
 pub fn escape(s: &str) -> String {
@@ -10,7 +10,7 @@ pub fn escape(s: &str) -> String {
             '\r' => out.push_str("⟨CR⟩"),
             '\t' => out.push_str("⟨TAB⟩"),
             '\0' => out.push_str("⟨NUL⟩"),
-            c if c.is_control() || (c.is_whitespace() && c != ' ') => {
+            c if c == '⟨' || c.is_control() || (c.is_whitespace() && c != ' ') => {
                 out.push_str(&format!("⟨U+{:04X}⟩", u32::from(c)))
             }
             c => out.push(c),
