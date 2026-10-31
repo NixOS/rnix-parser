@@ -74,14 +74,15 @@ pub fn compare(nix: &Nix, root: &SyntaxNode) -> Result<Option<Difference>, Strin
         "null" => return Ok(None),
         json => &literals[json.parse::<usize>().unwrap()],
     };
+    // Nix writes both sides' values as JSON.
     let shown = |expr: &str| nix.eval_json(expr).unwrap_or_else(|error| error);
     let typed = |expr: &str| format!("[ (builtins.typeOf ({expr})) ({expr}) ]");
     Ok(Some(match &literal.rnix {
-        Value::String(value) => Difference {
+        Value::String(_) => Difference {
             literal: literal.text.clone(),
             number: false,
             nix: shown(&literal.source),
-            rnix: json_string(value),
+            rnix: shown(&literal.rnix.expr()),
         },
         Value::Number(value) => Difference {
             literal: literal.text.clone(),
@@ -174,33 +175,4 @@ fn nix_string(s: &str) -> String {
     }
     out.push('"');
     out
-}
-
-/// A JSON string for `s`, escaped like Nix's `builtins.toJSON`.
-fn json_string(s: &str) -> String {
-    let mut out = String::from("\"");
-    for c in s.chars() {
-        match c {
-            '\\' => out.push_str("\\\\"),
-            '"' => out.push_str("\\\""),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            '\u{8}' => out.push_str("\\b"),
-            '\u{c}' => out.push_str("\\f"),
-            c if u32::from(c) < 0x20 => out.push_str(&format!("\\u{:04x}", u32::from(c))),
-            c => out.push(c),
-        }
-    }
-    out.push('"');
-    out
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn json_string_like_nix() {
-        // What `nix-instantiate --eval --json` prints for this string.
-        assert_eq!(super::json_string("a\u{8}b\u{c}c\u{1}d\u{7f}"), "\"a\\bb\\fc\\u0001d\u{7f}\"");
-    }
 }
