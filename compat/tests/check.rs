@@ -36,3 +36,12 @@ fn paths_are_the_same_everywhere() {
         "[ (/a) (/homeless-shelter/b) ((__findFile __nixPath \"c\")) ]"
     );
 }
+
+#[test]
+fn error_positions_are_in_the_input() {
+    let nix = Nix::new().unwrap();
+    assert_eq!(
+        nix.parse("{ a = 1;\n  a = 2; }").unwrap_err(),
+        "error: attribute 'a' already defined at «stdin»:1:3"
+    );
+}

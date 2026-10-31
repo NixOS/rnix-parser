@@ -177,17 +177,17 @@ rnix-accepts    a⟨U+2028⟩b
 
 ### duplicate-attr
 rnix-accepts    { a = 1; a = 2; }
-    nix: error: attribute 'a' already defined at «stdin»:2:3
+    nix: error: attribute 'a' already defined at «stdin»:1:3
 rnix-accepts    let a = 1; a = 2; in a
-    nix: error: attribute 'a' already defined at «stdin»:2:5
+    nix: error: attribute 'a' already defined at «stdin»:1:5
 rnix-accepts    { a = 1; ${"a"} = 2; }
-    nix: error: attribute 'a' already defined at «stdin»:2:3
+    nix: error: attribute 'a' already defined at «stdin»:1:3
 rnix-accepts    { a.b = 1; a = 2; }
-    nix: error: attribute 'a' already defined at «stdin»:2:3
+    nix: error: attribute 'a' already defined at «stdin»:1:3
 rnix-accepts    { a = { b = 1; }; a.b = 2; }
-    nix: error: attribute 'a.b' already defined at «stdin»:2:9
+    nix: error: attribute 'a.b' already defined at «stdin»:1:9
 rnix-accepts    { inherit a; a = 1; }
-    nix: error: attribute 'a' already defined at «stdin»:2:11
+    nix: error: attribute 'a' already defined at «stdin»:1:11
 same            { a = { }; a = { }; }
 
 ### duplicate-formal

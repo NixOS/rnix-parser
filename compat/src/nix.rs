@@ -11,6 +11,26 @@ use std::{
 /// free variables legal.
 const PREFIX: &str = "with { };\n";
 
+/// Moves the positions in an error back to where they are in the input, above the line that
+/// [`PREFIX`] adds: `«stdin»:2:3` is `«stdin»:1:3`, like in Nix's own tests.
+fn above_prefix(error: &str) -> String {
+    const STDIN: &str = "«stdin»:";
+    let mut out = String::new();
+    let mut rest = error;
+    while let Some(start) = rest.find(STDIN) {
+        let after = &rest[start + STDIN.len()..];
+        let digits = after.bytes().take_while(u8::is_ascii_digit).count();
+        out.push_str(&rest[..start + STDIN.len()]);
+        match after[..digits].parse::<usize>() {
+            Ok(line) if line > 1 => out.push_str(&(line - 1).to_string()),
+            _ => out.push_str(&after[..digits]),
+        }
+        rest = &after[digits..];
+    }
+    out.push_str(rest);
+    out
+}
+
 /// A `nix-instantiate`: `$RNIX_COMPAT_NIX_INSTANTIATE`, or the one on `$PATH`.
 pub struct Nix {
     program: OsString,
@@ -34,7 +54,9 @@ impl Nix {
     /// Parses `source`, returning Nix's rendering of the expression (`nix-instantiate --parse`),
     /// or the first line of the error.
     pub fn parse(&self, source: &str) -> Result<String, String> {
-        let shown = self.run(&["--parse"], &format!("{PREFIX}{source}"))?;
+        let shown = self
+            .run(&["--parse"], &format!("{PREFIX}{source}"))
+            .map_err(|error| above_prefix(&error))?;
         let expr = shown.strip_prefix("(with { }; ").and_then(|s| s.strip_suffix(')'));
         Ok(expr.unwrap_or(&shown).to_string())
     }
