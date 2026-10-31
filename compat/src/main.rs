@@ -5,15 +5,15 @@ use std::{collections::BTreeMap, env, fs, path::PathBuf, process::ExitCode, thre
 use rnix_compat::{Checker, Nix, escape, nix_files, par_map};
 
 const USAGE: &str = "\
-usage: rnix-compat [--strings] [--jobs N] [--report FILE] [-e EXPR]... [PATH]...
+usage: rnix-compat [--values] [--jobs N] [--report FILE] [-e EXPR]... [PATH]...
 
 Compares rnix's parse of every .nix file under each PATH, and of each EXPR,
 with Nix's. Prints every input with an outcome other than `same` or
 `both-reject` (to FILE, with --report), then how often each outcome occurred.
 Exits with status 1 if rnix parses any input that Nix accepts differently.
 
-  --strings  also compare the values of string literals
-  --jobs N   compare N inputs at a time (default: one per CPU)
+  --values  also compare the values of string and number literals
+  --jobs N  compare N inputs at a time (default: one per CPU)
 ";
 
 enum Input {
@@ -32,7 +32,7 @@ fn main() -> ExitCode {
 }
 
 fn run() -> Result<ExitCode, String> {
-    let mut strings = false;
+    let mut values = false;
     let mut jobs = thread::available_parallelism().map_or(1, |n| n.get());
     let mut report = None;
     let mut inputs = Vec::new();
@@ -44,7 +44,7 @@ fn run() -> Result<ExitCode, String> {
                 print!("{USAGE}");
                 return Ok(ExitCode::SUCCESS);
             }
-            "--strings" => strings = true,
+            "--values" => values = true,
             "--jobs" => jobs = value()?.parse().map_err(|e| format!("--jobs: {e}"))?,
             "--report" => report = Some(PathBuf::from(value()?)),
             "-e" => inputs.push(Input::Expr(value()?)),
@@ -61,7 +61,7 @@ fn run() -> Result<ExitCode, String> {
 
     let nix = Nix::new().map_err(|e| format!("can't run nix-instantiate: {e}"))?;
     eprintln!("comparing {} inputs with {}", inputs.len(), nix.version());
-    let checker = if strings { Checker::new(nix).with_strings() } else { Checker::new(nix) };
+    let checker = if values { Checker::new(nix).with_values() } else { Checker::new(nix) };
     let results = par_map(&inputs, jobs, |input| match input {
         Input::Expr(source) => (escape(source), checker.check(source)),
         Input::File(path) => (path.display().to_string(), checker.check_file(path)),

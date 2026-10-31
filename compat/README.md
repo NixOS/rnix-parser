@@ -23,9 +23,11 @@ The goals, in order:
    so that a token rnix split or merged shows up as a different tree too. Paths are written as
    they are, though: if rnix read a path where Nix reads something else, Nix would read the
    rendering like the source, and the outcome would be `same`.
-3. With `--strings` (and in the tests), Nix also evaluates every string literal, with
-   interpolations replaced by a placeholder, and the value must be the one rnix's
-   `Str::normalized_parts` gives.
+3. With `--values` (and in the tests), Nix also evaluates every string literal, with
+   interpolations replaced by a placeholder, and every number literal, and the value must be
+   the one rnix gives it: `Str::normalized_parts`, `Integer::value` and `Float::value`. Nix's
+   rendering of a parse can't tell `1`, `1.0` and `1.0000001` apart, so a number's type is
+   compared too.
 
 Nix looks variables up while it parses, so inputs are parsed inside `with { };`. `nix-instantiate`
 runs without a store or `nix.conf` (settings like `lint-url-literals` change what Nix accepts),
@@ -39,8 +41,9 @@ made-up `HOME`, so that paths come out the same everywhere.
 | `rnix-rejects` | Nix accepts the input and rnix doesn't (goal 1) |
 | `tree-differs` | Both accept the input, and parse it to different expressions (goal 1) |
 | `string-differs` | Same expression, but a string literal has another value (goal 1) |
+| `number-differs` | Same expression, but a number literal has another type or value (goal 1) |
 | `render-rejected` | Nix rejects rnix's rendering of input it accepts: a bug in `render.rs` |
-| `strings-rejected` | Nix can't evaluate the string literals of input it accepts: a bug in `strings.rs` |
+| `values-rejected` | Nix can't evaluate the literals of input it accepts: a bug in `values.rs` |
 | `rnix-accepts` | rnix accepts the input and Nix doesn't (goal 2) |
 | `unreadable` | A file that can't be read, or isn't UTF-8, which is all rnix parses |
 
@@ -54,17 +57,16 @@ cargo test                    # cases.md, rnix's test_data and Nix's language te
 UPDATE_EXPECT=1 cargo test    # record changed outcomes in the .expect files
 
 cargo run --release -- -e '0.a'                            # compare an expression
-cargo run --release -- --strings "$RNIX_COMPAT_NIXPKGS"    # all of nixpkgs, a few minutes
+cargo run --release -- --values "$RNIX_COMPAT_NIXPKGS"     # all of nixpkgs, a few minutes
 ```
 
 Update expectations from `compat/`: Cargo only reads `compat/.cargo/config.toml`, which tells
 expect-test where to write the expectations in `tests/render.rs`, when it runs there.
 
 `rnix-compat` lists the inputs on which the parsers disagree, counts the outcomes, and exits with
-status 1 if any input is `rnix-rejects`, `tree-differs`, `string-differs`, `render-rejected` or
-`strings-rejected`. With
-rnix 0.15.1 and Nix 2.35.3, every file in nixpkgs is `same`. To use another Nix, set
-`RNIX_COMPAT_NIX_INSTANTIATE`.
+status 1 if any input is `rnix-rejects`, `tree-differs`, `string-differs`, `number-differs`,
+`render-rejected` or `values-rejected`. With rnix 0.15.1 and Nix 2.35.3, every file in nixpkgs is
+`same`. To use another Nix, set `RNIX_COMPAT_NIX_INSTANTIATE`.
 
 - [`cases.md`](cases.md) lists the inputs on which the parsers disagree, by cause, and inputs on
   which they agree but that are easy to get wrong. [`cases.expect`](cases.expect) records their

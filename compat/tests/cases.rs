@@ -28,7 +28,7 @@ fn inputs() -> Vec<(&'static str, String)> {
 
 #[test]
 fn cases() {
-    let checker = Checker::new(Nix::new().unwrap()).with_strings();
+    let checker = Checker::new(Nix::new().unwrap()).with_values();
     let inputs = inputs();
     let jobs = thread::available_parallelism().map_or(1, |n| n.get());
     let outcomes = par_map(&inputs, jobs, |(_, input)| checker.check(input));

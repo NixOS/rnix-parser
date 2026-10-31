@@ -9,7 +9,7 @@ use rnix_compat::{Checker, Nix, nix_files, par_map};
 /// Compares rnix's parse of every `.nix` file under `dir` with Nix's, and records those on which
 /// the parsers disagree.
 fn check_dir(dir: &Path, expected: ExpectFile) {
-    let checker = Checker::new(Nix::new().unwrap()).with_strings();
+    let checker = Checker::new(Nix::new().unwrap()).with_values();
     let files = nix_files(dir).unwrap();
     let jobs = thread::available_parallelism().map_or(1, |n| n.get());
     let outcomes = par_map(&files, jobs, |file| checker.check_file(file));

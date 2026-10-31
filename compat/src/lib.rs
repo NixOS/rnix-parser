@@ -5,7 +5,7 @@ mod corpus;
 mod nix;
 mod notation;
 mod render;
-mod strings;
+mod values;
 
 pub use check::{Checker, Outcome};
 pub use corpus::{nix_files, par_map};

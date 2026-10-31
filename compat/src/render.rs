@@ -109,7 +109,7 @@ fn render_token(token: &SyntaxToken, out: &mut String) {
 }
 
 /// A float literal Nix reads as exactly `f`: digits before the point, and an exponent.
-fn canonical_float(f: f64) -> Option<String> {
+pub(crate) fn canonical_float(f: f64) -> Option<String> {
     if f == 0.0 {
         return Some("0.0".into());
     }

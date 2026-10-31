@@ -4,7 +4,7 @@ use std::{fmt::Write, fs, path::Path};
 
 use crate::{
     Nix, escape, render,
-    strings::{self, Difference},
+    values::{self, Difference},
 };
 
 /// How rnix's parse of an input compares with Nix's.
@@ -19,14 +19,17 @@ pub enum Outcome {
     /// Both accept the input but parse it to different expressions. `rnix` is Nix's parse of
     /// rnix's [`render`]ing.
     TreeDiffers { nix: String, rnix: String },
-    /// Both parse the input to the same expression, but a string literal in it has different
-    /// values. The values are JSON strings.
+    /// Both parse the input to the same expression, but a string literal in it has another
+    /// value. The values are JSON.
     StringDiffers { literal: String, nix: String, rnix: String },
+    /// Both parse the input to the same expression, but a number literal in it has another type
+    /// or value. The types and values are JSON.
+    NumberDiffers { literal: String, nix: String, rnix: String },
     /// Nix rejects rnix's rendering of input it accepts: a bug in [`render`].
     RenderRejected { nix: String, rendering: String },
-    /// Nix can't evaluate the string literals of input it accepts, with their interpolations
-    /// replaced: a bug in the comparison of string values.
-    StringsRejected { nix: String },
+    /// Nix can't evaluate the literals of input it accepts, with the interpolations in strings
+    /// replaced: a bug in the comparison of values.
+    ValuesRejected { nix: String },
     /// rnix accepts the input and Nix doesn't.
     RnixAccepts { nix: String },
     /// The input is a file that can't be read, or isn't UTF-8, which is all rnix parses.
@@ -42,8 +45,9 @@ impl Outcome {
             Outcome::RnixRejects { .. } => "rnix-rejects",
             Outcome::TreeDiffers { .. } => "tree-differs",
             Outcome::StringDiffers { .. } => "string-differs",
+            Outcome::NumberDiffers { .. } => "number-differs",
             Outcome::RenderRejected { .. } => "render-rejected",
-            Outcome::StringsRejected { .. } => "strings-rejected",
+            Outcome::ValuesRejected { .. } => "values-rejected",
             Outcome::RnixAccepts { .. } => "rnix-accepts",
             Outcome::Unreadable { .. } => "unreadable",
         }
@@ -62,8 +66,9 @@ impl Outcome {
             Outcome::RnixRejects { .. }
                 | Outcome::TreeDiffers { .. }
                 | Outcome::StringDiffers { .. }
+                | Outcome::NumberDiffers { .. }
                 | Outcome::RenderRejected { .. }
-                | Outcome::StringsRejected { .. }
+                | Outcome::ValuesRejected { .. }
         )
     }
 
@@ -72,10 +77,11 @@ impl Outcome {
             Outcome::Same => vec![],
             Outcome::BothReject { nix }
             | Outcome::RnixAccepts { nix }
-            | Outcome::StringsRejected { nix } => vec![("nix", nix)],
+            | Outcome::ValuesRejected { nix } => vec![("nix", nix)],
             Outcome::RnixRejects { rnix } => vec![("rnix", rnix)],
             Outcome::TreeDiffers { nix, rnix } => vec![("nix", nix), ("rnix", rnix)],
-            Outcome::StringDiffers { literal, nix, rnix } => {
+            Outcome::StringDiffers { literal, nix, rnix }
+            | Outcome::NumberDiffers { literal, nix, rnix } => {
                 vec![("literal", literal), ("nix", nix), ("rnix", rnix)]
             }
             Outcome::RenderRejected { nix, rendering } => {
@@ -98,17 +104,18 @@ impl Outcome {
 /// Compares rnix's parses with a [`Nix`]'s.
 pub struct Checker {
     nix: Nix,
-    strings: bool,
+    values: bool,
 }
 
 impl Checker {
     pub fn new(nix: Nix) -> Self {
-        Self { nix, strings: false }
+        Self { nix, values: false }
     }
 
-    /// Also compares the value of every string literal, which takes one more evaluation by Nix.
-    pub fn with_strings(self) -> Self {
-        Self { strings: true, ..self }
+    /// Also compares the values of string and number literals, which takes one more evaluation
+    /// by Nix.
+    pub fn with_values(self) -> Self {
+        Self { values: true, ..self }
     }
 
     pub fn nix(&self) -> &Nix {
@@ -128,13 +135,16 @@ impl Checker {
                 match self.nix.parse(&rendering) {
                     Err(nix) => Outcome::RenderRejected { nix, rendering },
                     Ok(rnix) if rnix != nix => Outcome::TreeDiffers { nix, rnix },
-                    Ok(_) if !self.strings => Outcome::Same,
-                    Ok(_) => match strings::compare(&self.nix, &parse.syntax()) {
-                        Ok(Some(Difference { literal, nix, rnix })) => {
+                    Ok(_) if !self.values => Outcome::Same,
+                    Ok(_) => match values::compare(&self.nix, &parse.syntax()) {
+                        Ok(Some(Difference { literal, number: false, nix, rnix })) => {
                             Outcome::StringDiffers { literal, nix, rnix }
                         }
+                        Ok(Some(Difference { literal, number: true, nix, rnix })) => {
+                            Outcome::NumberDiffers { literal, nix, rnix }
+                        }
                         Ok(None) => Outcome::Same,
-                        Err(nix) => Outcome::StringsRejected { nix },
+                        Err(nix) => Outcome::ValuesRejected { nix },
                     },
                 }
             }

@@ -19,13 +19,20 @@ fn outcomes() {
 
 #[test]
 fn string_values() {
-    let checker = Checker::new(Nix::new().unwrap()).with_strings();
+    let checker = Checker::new(Nix::new().unwrap()).with_values();
     assert_eq!(checker.check("''\n  a ${b}\n    c\n''").kind(), "same");
     // Nix reads a carriage return in a string as a newline.
     assert_eq!(
         checker.check("\"a\r\nb\"").describe("\"a⟨CR⟩⟨LF⟩b\""),
         "string-differs  \"a⟨CR⟩⟨LF⟩b\"\n    literal: \"a⟨CR⟩⟨LF⟩b\"\n    nix: \"a\\nb\"\n    rnix: \"a\\r\\nb\"\n"
     );
+}
+
+#[test]
+fn number_values() {
+    let checker = Checker::new(Nix::new().unwrap()).with_values();
+    let numbers = "[ 0 007 9223372036854775807 1. 1.0 .5 0.5 1.0000001 1.5e3 1.E-2 1.e5 ]";
+    assert_eq!(checker.check(numbers).kind(), "same");
 }
 
 #[test]
