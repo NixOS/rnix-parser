@@ -20,7 +20,9 @@ The goals, in order:
    and the rendering to the same expression, rnix grouped the tokens like Nix does. Nix is the only
    printer involved, so the comparison needs no copy of Nix's AST. The rendering separates tokens
    with spaces, except inside strings and paths, and writes numbers and URIs in canonical forms,
-   so that a token rnix split or merged shows up as a different tree too.
+   so that a token rnix split or merged shows up as a different tree too. Paths are written as
+   they are, though: if rnix read a path where Nix reads something else, Nix would read the
+   rendering like the source, and the outcome would be `same`.
 3. With `--strings` (and in the tests), Nix also evaluates every string literal, with
    interpolations replaced by a placeholder, and the value must be the one rnix's
    `Str::normalized_parts` gives.
@@ -54,6 +56,9 @@ UPDATE_EXPECT=1 cargo test    # record changed outcomes in the .expect files
 cargo run --release -- -e '0.a'                            # compare an expression
 cargo run --release -- --strings "$RNIX_COMPAT_NIXPKGS"    # all of nixpkgs, a few minutes
 ```
+
+Update expectations from `compat/`: Cargo only reads `compat/.cargo/config.toml`, which tells
+expect-test where to write the expectations in `tests/render.rs`, when it runs there.
 
 `rnix-compat` lists the inputs on which the parsers disagree, counts the outcomes, and exits with
 status 1 if any input is `rnix-rejects`, `tree-differs`, `string-differs`, `render-rejected` or
